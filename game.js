@@ -19,28 +19,57 @@ class mainScene {
     this.load.image('front_left_Blue', 'res/MainMenu/front_monster_2.png')
     this.load.image('front_carrot', 'res/MainMenu/front_carrot.png')
     this.load.image('front_bg', 'res/MainMenu/front_front.png')
+    this.load.image('front_btn_lock', 'res/MainMenu/front_btn_floor_locked.png')
+    this.load.image('front_pop_sure', 'res/UI/btn_blue_m.png')
+    this.load.image('front_pop_sure_pressed', 'res/UI/btn_blue_m_pressed.png')
+
+    this.load.image('front_pop_bg', 'res/Common/bg/woodbg_notice.png')
+    this.load.image('front_pop_info', 'res/MainMenu/unlock_floor.png')
+    this.load.image('front_pop_sure_ok', 'res/UI/zh/btn_blue_m_ok.png')
+    this.load.image('front_pop_cancel', 'res/UI/btn_green_m.png')
+    this.load.image('front_pop_cancel_pressed', 'res/UI/btn_green_m_pressed.png')
+    this.load.image('front_pop_cancel_text', 'res/UI/zh/btn_green_m_cancel.png')
+
+    this.load.audio('front_bg_music', 'res/Sound/MainMenu/BGMusic.mp3')
+    this.load.audio('front_select_music', 'res/Sound/MainMenu/Select.mp3')
   }
   create() {
+    
     let bg = this.add.image(0, 0, 'bg')
   //  console.log(this)
     bg.setPosition(this.cameras.main.centerX, this.cameras.main.centerY)
+    let bgMusic = this.sound.add('front_bg_music', { loop: true })
+    let selectMusic = this.sound.add('front_select_music')
+    bgMusic.play()
 
     // 开始按钮
     this.startBtn = this.add.sprite(0, 0, 'start_normal').setInteractive();
-    this.startBtn.on('pointerdown', (event) => { 
+    this.startBtn.on('pointerdown', (event) => {
+      selectMusic.play()
       this.startBtn.setTexture('start_press')
     });
 
-    this.startBtn.setPosition(this.cameras.main.centerX - 8, this.cameras.main.centerY + 75)
+    this.startBtn.setPosition(this.cameras.main.centerX - 8, this.cameras.main.centerY - 75)
 
     // sfloor
     this.floorBtn = this.add.sprite(0, 0, 'floor_normal').setInteractive();
     this.floorBtn.on('pointerdown', (event) => { 
+      selectMusic.play()
       this.floorBtn.setTexture('floor_press')
+      if (this.isUnlock === 'NO') {
+        console.log('jiesuo') 
+        this.pop.setVisible(true)
+      }
     });
 
-    this.floorBtn.setPosition(this.cameras.main.centerX - 8, this.cameras.main.centerY - 45)
+    this.floorBtn.setPosition(this.cameras.main.centerX - 8, this.cameras.main.centerY + 45)
 
+    // locked front_btn_lock
+    this.isUnlock = window.localStorage.getItem('isUnLock') || 'NO';
+    this.lockButton = this.add.sprite(this.floorBtn.x + 135, this.floorBtn.y / 2 + 160, 'front_btn_lock')
+    if (this.isUnlock !== 'NO') {
+      this.lockButton .destroy()
+    }
     // 添加怪物
     let master = this.add.sprite(0, 0, 'front_master')
     // 添加设置
@@ -118,13 +147,13 @@ class mainScene {
 
     this.add.sprite(this.cameras.main.centerX + 320, this.cameras.main.height - 150, 'front_smoke_2')
 
-    this.carrpt = this.add.sprite(this.cameras.main.centerX + 320, this.cameras.main.height - 120, 'front_carrot')
+    this.carrot = this.add.sprite(this.cameras.main.centerX + 320, this.cameras.main.height - 120, 'front_carrot')
     // 放大效果
-    this.carrpt.scaleX = 0.7;
-    this.carrpt.scaleY = 0.7;
+    this.carrot.scaleX = 0.7;
+    this.carrot.scaleY = 0.7;
 
     this.tweens.add({
-      targets: this.carrpt,
+      targets: this.carrot,
       props: {
         scaleX: { value: 1, duration: 800, ease: 'Power0'},
         scaleY: { value: 1, duration: 800, ease: 'Power0'}
@@ -148,23 +177,51 @@ class mainScene {
     });
 
     this.add.sprite(this.cameras.main.centerX, this.cameras.main.centerY, 'front_bg')
+
+    this.renderLayer()
   }
 
+  /*
+   * popup layer
+   */
+  renderLayer () {
+    var bg1 = this.add.sprite(this.cameras.main.centerX, this.cameras.main.centerY, 'front_pop_bg')
+    var bg2 = this.add.sprite(this.cameras.main.centerX, this.cameras.main.centerY - 100, 'front_pop_info')
+
+    var bg3 = this.add.container(420, 420)
+    // 开始按钮
+    var sureButton = this.add.sprite(0, 0, 'front_pop_sure').setInteractive()
+    var sureText = this.add.sprite(0,0 ,'front_pop_sure_ok')
+    bg3.add(sureButton)
+    bg3.add(sureText)
+ 
+
+    sureButton.on('pointerdown', (event) => {
+      sureButton.setTexture('front_pop_sure_pressed')
+    });
+
+    var bg4 = this.add.container(720, 420)
+    // 取消按钮
+    var cancelButton = this.add.sprite(0, 0, 'front_pop_cancel').setInteractive()
+    var cancelText = this.add.sprite(0,0 ,'front_pop_cancel_text')
+
+    bg4.add(cancelButton)
+    bg4.add(cancelText)
+
+    cancelButton.on('pointerdown', (event) => {
+      cancelButton.setTexture('front_pop_cancel_pressed')
+      this.pop.setVisible(false)
+    });
+
+    this.pop = this.add.container(0,0, [bg1, bg2, bg3, bg4])
+    this.pop.setVisible(false)
+  }
   onStartClick() {
 
   }
   update() {
 
-    var position = this.curve.getPoint(this.path.t, this.path.vec);
-    this.carrpt.setPosition(position.x, position.y)
+    // var position = this.curve.getPoint(this.path.t, this.path.vec);
+    // this.carrot.setPosition(position.x, position.y)
   }
 }
-
-new Phaser.Game({
-  width: 1136, // Width of the game in pixels
-  height: 640, // Height of the game in pixels
-  backgroundColor: '#3498db', // The background color (blue)
-  scene: mainScene, // The name of the scene we created
-  physics: { default: 'arcade' }, // The physics engine to use
-  parent: 'game', // Create the game inside the <div id="game"> 
-});
