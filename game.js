@@ -48,6 +48,9 @@ class mainScene {
       selectMusic.play()
       this.startBtn.setTexture('start_press')
     });
+    this.startBtn.on('pointerout', (event) => { 
+      this.startBtn.setTexture('start_normal')
+    });
 
     this.startBtn.setPosition(this.cameras.main.centerX - 8, this.cameras.main.centerY - 75)
 
@@ -60,6 +63,9 @@ class mainScene {
         console.log('jiesuo') 
         this.pop.setVisible(true)
       }
+    });
+    this.floorBtn.on('pointerout', (event) => { 
+      this.floorBtn.setTexture('floor_normal')
     });
 
     this.floorBtn.setPosition(this.cameras.main.centerX - 8, this.cameras.main.centerY + 45)
@@ -198,6 +204,14 @@ class mainScene {
 
     sureButton.on('pointerdown', (event) => {
       sureButton.setTexture('front_pop_sure_pressed')
+      // 解锁
+      // 发送请求处理
+      // 本地保存
+      window.localStorage.setItem('isUnLock', 'YES')
+      // 清除锁
+      this.lockButton && this.lockButton.destroy()
+      this.isUnlock = 'YES'
+      this.pop.setVisible(false)
     });
 
     var bg4 = this.add.container(720, 420)
