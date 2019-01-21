@@ -235,7 +235,7 @@ class mainScene {
   }
   update() {
 
-    // var position = this.curve.getPoint(this.path.t, this.path.vec);
-    // this.carrot.setPosition(position.x, position.y)
+    var position = this.curve.getPoint(this.path.t, this.path.vec);
+    this.carrot.setPosition(position.x, position.y)
   }
 }
