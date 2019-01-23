@@ -8,6 +8,10 @@ class levelSelect {
       this.load.image(`stage_map_${i}`, "res/ChooseLevel/Map/stage_map_" + i + ".png");
     }
 
+    for (var i = 1; i < 135; i++) {
+      this.load.image(`route_${i}`, "res/ChooseLevel/Route/route_" + i + ".png");
+    }
+
     this.load.image('choose_level_adv','res/ChooseLevel/stagepoint_adv.png')
     this.load.image('choose_level_boss', 'res/ChooseLevel/stagepoint_gate.png')
     this.load.image('choose_level_time', 'res/ChooseLevel/stagepoint_time.png')
@@ -49,7 +53,7 @@ class levelSelect {
     };
 
     controls = new Phaser.Cameras.Controls.SmoothedKeyControl(controlConfig);
-
+    this.loadLevel(2)
     // this.input.on('dragstart', function (arg) {
     //   console.log(arg)
     // })
@@ -95,6 +99,30 @@ class levelSelect {
         // button.setTag(i);
         // button.addTouchEventListener(this.onLevelButtonEvent, this);
     }
+
+   
+  }
+
+  loadLevel(level) {
+    this.loadRoute(level)
+    this.loadLevelEffects(level)
+  }
+
+  loadRoute (level) {
+    for (let i = 0; i < level - 1; i ++) {
+      var route = this.add.sprite(0, 0, 'route_' + (i + 1))
+      if (i %10 == 9) {
+        route.setOrigin(0, 0.5)
+      }
+
+      route.x = route.width / 2 + Math.floor(i / 10) * route.width;
+      route.y = this.cameras.main.height / 2
+    }
+  }
+
+  loadLevelEffects (level) {
+    var button = this.bgContainer.getAt(level-1)
+    console.log(button)
   }
 
   update (time, delta) {
