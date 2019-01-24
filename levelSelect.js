@@ -16,6 +16,7 @@ class levelSelect {
     this.load.image('choose_level_boss', 'res/ChooseLevel/stagepoint_gate.png')
     this.load.image('choose_level_time', 'res/ChooseLevel/stagepoint_time.png')
     this.load.image('choose_level_chance', 'res/ChooseLevel/stagepoint_chance.png')
+    this.load.image('level_effect', 'res/ChooseLevel/stagemap_local.png')
   }
   create () {
     // todo 判断 BGMusic 音乐是否播放，如果没有 那么开始播放
@@ -25,6 +26,7 @@ class levelSelect {
     var tiles = []
 
     this.bgContainer = this.add.container(0, 0)
+    
     for (var i = 0; i < 14; i++) {
       var tile = map.addTilesetImage(`stage_map_${i}`);
       tiles.push(tile)
@@ -53,7 +55,8 @@ class levelSelect {
     };
 
     controls = new Phaser.Cameras.Controls.SmoothedKeyControl(controlConfig);
-    this.loadLevel(2)
+    
+    this.loadRoute(2)
     // this.input.on('dragstart', function (arg) {
     //   console.log(arg)
     // })
@@ -70,7 +73,8 @@ class levelSelect {
     // this.input.on('dragend', function (arg) {
     //   console.log(arg)
     // })
-
+    this.buttonContainer = this.add.container(0, 0)
+    this.buttonContainer.setDepth(10)
     let objs = layer.objects;
     for (var i = 0; i < objs.length; i++) {
         var button = this.add.sprite(0,0, 'choose_level_adv').setInteractive();
@@ -87,6 +91,7 @@ class levelSelect {
         }
 
         button.setPosition(objs[i].x, objs[i].y);
+        this.buttonContainer.add(button);
         ((i) => {
           button.on('pointerdown', (a, b ,c ,d) => { 
             console.log(i, a, b, c, d)
@@ -95,12 +100,11 @@ class levelSelect {
             // 进入不同等级的游戏
           }, this)
         })(i)
-
+        
         // button.setTag(i);
         // button.addTouchEventListener(this.onLevelButtonEvent, this);
     }
-
-   
+    this.loadLevelEffects(2);
   }
 
   loadLevel(level) {
@@ -121,8 +125,18 @@ class levelSelect {
   }
 
   loadLevelEffects (level) {
-    var button = this.bgContainer.getAt(level-1)
+    var button = this.buttonContainer.getAt(level-1)
     console.log(button)
+    
+    for (var i = 0; i < 3; i++) {
+      this.time.delayedCall(250 * i, () => {
+    //     console.log(i)
+        var effect = new LevelEffect(this, button.x, button.y)
+        
+        this.add.existing(effect)
+      }, [], this);
+    }
+    
   }
 
   update (time, delta) {
