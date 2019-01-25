@@ -1,6 +1,10 @@
 var controls
 
-class levelSelect {
+class levelSelect  extends Phaser.Scene  {
+  constructor ()
+  {
+      super('level_select');
+  }
   preload () {
     this.load.tilemapTiledJSON('map', 'res/ChooseLevel/Map/TiledMap.json');
     // res/ChooseLevel/Map/stage_map_" + i + ".png
@@ -98,6 +102,8 @@ class levelSelect {
             // 停止音乐
             // 关卡设置
             // 进入不同等级的游戏
+            this.scene.stop();
+            this.scene.start('game_play');
           }, this)
         })(i)
         
@@ -126,7 +132,6 @@ class levelSelect {
 
   loadLevelEffects (level) {
     var button = this.buttonContainer.getAt(level-1)
-    console.log(button)
     
     for (var i = 0; i < 3; i++) {
       this.time.delayedCall(250 * i, () => {

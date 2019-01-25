@@ -7,10 +7,7 @@ class LevelEffect extends Phaser.GameObjects.Sprite {
       this.setTexture('level_effect');
       this.setPosition(x, y);
 
-      // var timedEvent = scene.time.addEvent({ delay: 1000, callback: () => {
-      //   console.log(1)
-        this.play(scene)
-      // }, callbackScope: this, loop: true });
+      this.play(scene)
   }
 
   play (scene) {
@@ -40,28 +37,5 @@ class LevelEffect extends Phaser.GameObjects.Sprite {
         }, callbackScope: this, loop: false })
       }
     })
-  //   var timeline = scene.tweens.timeline({
-
-  //     targets: this,
-  //     loop: -1,
-  //     loopDelay: 1000,
-      
-  //     tweens: [
-  //       {
-  //         scaleX: { value: 1.35, duration: 800, ease: 'Power1' },
-  //         scaleY: { value: 1.35, duration: 800, ease: 'Power1' },
-  //       },
-  //       {
-  //         alpha: {value: 0, duration: 560, ease: 'Expo.easeOut'},
-  //       }
-     
-  //     ],
-  //     onComplete: () => {
-  //       this.setScale(0.35, 0.35)
-
-  //       this.setAlpha(1)
-  //     }
-
-  // });
   }
 }

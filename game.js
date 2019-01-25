@@ -47,6 +47,8 @@ class mainScene {
     this.startBtn.on('pointerdown', (event) => {
       selectMusic.play()
       this.startBtn.setTexture('start_press')
+      this.scene.stop();
+      this.scene.run('level_select');
     });
     this.startBtn.on('pointerout', (event) => { 
       this.startBtn.setTexture('start_normal')
