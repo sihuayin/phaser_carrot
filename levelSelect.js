@@ -1,10 +1,7 @@
 var controls
 
 class levelSelect  extends Phaser.Scene  {
-  constructor ()
-  {
-      super('level_select');
-  }
+
   preload () {
     this.load.tilemapTiledJSON('map', 'res/ChooseLevel/Map/TiledMap.json');
     // res/ChooseLevel/Map/stage_map_" + i + ".png
@@ -20,6 +17,14 @@ class levelSelect  extends Phaser.Scene  {
     this.load.image('choose_level_boss', 'res/ChooseLevel/stagepoint_gate.png')
     this.load.image('choose_level_time', 'res/ChooseLevel/stagepoint_time.png')
     this.load.image('choose_level_chance', 'res/ChooseLevel/stagepoint_chance.png')
+    this.load.image('choose_level_leftbg', 'res/ChooseLevel/stagemap_toolbar_leftbg.png')
+    this.load.image('choose_level_home_button', 'res/ChooseLevel/stagemap_toolbar_home.png')
+    this.load.image('choose_level_shop_button', 'res/ChooseLevel/stagemap_toolbar_shop.png')
+    this.load.image('choose_level_ranking_button', 'res/ChooseLevel/stagemap_toolbar_leaderboard.png')
+    this.load.image('choose_level_discount', 'res/ChooseLevel/zh/discount_tag_stone.png')
+    this.load.image('numbers', 'res/ChooseLevel/discount.png');
+    this.load.image('choose_level_rightbg', 'res/ChooseLevel/stagemap_toolbar_rightbg.png')
+    this.load.image('choose_level_overten', 'res/ChooseLevel/zh/stagemap_toolbar_overten.png')
     this.load.image('level_effect', 'res/ChooseLevel/stagemap_local.png')
   }
   create () {
@@ -111,6 +116,8 @@ class levelSelect  extends Phaser.Scene  {
         // button.addTouchEventListener(this.onLevelButtonEvent, this);
     }
     this.loadLevelEffects(2);
+
+    this.loadUI()
   }
 
   loadLevel(level) {
@@ -144,6 +151,91 @@ class levelSelect  extends Phaser.Scene  {
     
   }
 
+  loadUI () {
+    this.leftContainer = this.add.container(0, 0)
+    let leftPanle = this.add.image(0, 0, 'choose_level_leftbg')
+    leftPanle.setOrigin(0, 0)
+    this.leftContainer.add(leftPanle)
+
+    this.addHomeButton()
+    this.addShopButton()
+    this.addRankingButton()
+    this.loadDiscountButton();
+    this.loadLifeStar()
+  }
+
+  addHomeButton() {
+    let homeButton = this.add.sprite(0, 0, 'choose_level_home_button').setInteractive()
+    // homeButton.setScale(0.2, 0.2)
+    homeButton.setOrigin(0, 0)
+    homeButton.setPosition(10, 0)
+    homeButton.on('pointerdown', () => {
+      // this.sence.run()
+    });
+
+    this.leftContainer.add(homeButton)
+  }
+
+  addShopButton () {
+    let shopButton = this.add.sprite(0, 0, 'choose_level_shop_button').setInteractive()
+    shopButton.setOrigin(0, 0)
+    shopButton.setPosition(111, 0)
+    shopButton.on('pointerdown', () => {
+      // this.sence.run()
+    });
+
+    this.leftContainer.add(shopButton)
+  }
+
+  addRankingButton () {
+    let rankingButton = this.add.sprite(0, 0, 'choose_level_ranking_button').setInteractive()
+    rankingButton.setOrigin(0, 0)
+    rankingButton.setPosition(212, 0)
+    rankingButton.on('pointerdown', () => {
+      // this.sence.run()
+    });
+
+    this.leftContainer.add(rankingButton)
+  }
+
+  loadDiscountButton () {
+    this.midContainer = this.add.container(0, 0)
+    var discount = this.add.sprite(this.cameras.main.centerX, 0, 'choose_level_discount').setInteractive()
+    discount.setOrigin(0.5, 0)
+    discount.on('pointerdown', () => {
+      console.log('cu xiao')
+    })
+
+    this.midContainer.add(discount)
+    var config = {
+      image: 'numbers',
+      width: 24,
+      height: 30,
+      chars: Phaser.GameObjects.RetroFont.TEXT_SET8,
+      charsPerRow: 8,
+      spacing: { x: 0, y: 0 }
+    };
+
+    this.cache.bitmapFont.add('numbers', Phaser.GameObjects.RetroFont.Parse(this, config));
+    var dynamic = this.add.bitmapText(this.cameras.main.centerX + 35, 15, 'numbers', '7');
+    dynamic.setOrigin(0, 0)
+    this.midContainer.add(dynamic)
+  }
+
+  loadLifeStar() {
+    let bt = this.add.sprite(0, 0, 'choose_level_rightbg')
+    bt.setOrigin(1, 0)
+    bt.setPosition(this.cameras.main.width , 0)
+    bt.on('pointerdown', () => {
+      console.log('leell')
+    })
+    let starImage = this.add.image(0, 0, 'choose_level_overten')
+    starImage.setOrigin(1, 0)
+    starImage.setPosition(this.cameras.main.width, 0);
+
+    let text = this.add.text(this.cameras.main.width - 60, 0, '010').setFontFamily('Arial').setFontSize(24)
+    text.setOrigin(1, 0)
+  }
   update (time, delta) {
     controls.update(delta);
   }
