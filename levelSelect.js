@@ -1,7 +1,9 @@
 var controls
 
 class levelSelect  extends Phaser.Scene  {
-
+  constructor (){
+    super('level_select')
+  }
   preload () {
     this.load.tilemapTiledJSON('map', 'res/ChooseLevel/Map/TiledMap.json');
     // res/ChooseLevel/Map/stage_map_" + i + ".png
