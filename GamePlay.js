@@ -17,6 +17,8 @@ class gamePlayScene extends Phaser.Scene {
     this.load.image('theme_bg_path', 'res/GamePlay/Theme/Theme1/BG1/Path1.png')
     this.load.image('tiles', 'res/GamePlay/Theme/Theme1/BG1/1.png');
     this.load.image('start_bt', 'res/GamePlay/Object/Theme1/Object/start01.png')
+    this.load.image('start_carrot_hp_bg', 'res/GamePlay/carrot_hp_bg.png')
+    this.load.image('blood_number', 'res/Font/num_blood.png')
     this.load.tilemapTiledJSON({
       key: 'map',
       url: 'res/GamePlay/Theme/Theme1/BG1/Level1.json'
@@ -50,6 +52,8 @@ console.log(frames)
     this.loadTiledMap()
     this.loadStartButton()
     this.loadEndButton()
+    this.loadBloodBg()
+    this.loadBlood()
   }
 
   loadProperty () {
@@ -126,6 +130,25 @@ console.log(frames)
     var obj = objs.objects[1]
     console.log(obj, objs)
     endBt.setPosition(obj.x + objs.finalOffsetX, obj.y)
+    this.carrot = endBt
+  }
+
+  loadBloodBg () {
+    this.add.sprite(this.carrot.x + 75, this.carrot.y + 50, 'start_carrot_hp_bg')
+  }
+
+  loadBlood () {
+    var config = {
+      image: 'blood_number',
+      width: 16,
+      height: 22,
+      chars: Phaser.GameObjects.RetroFont.TEXT_SET8,
+      charsPerRow: 8,
+      spacing: { x: 0, y: 0 }
+    };
+
+    this.cache.bitmapFont.add('blood_number', Phaser.GameObjects.RetroFont.Parse(this, config));
+    this.add.bitmapText(this.carrot.x + 42, this.carrot.y + 40, 'blood_number', '10');
   }
   update () {}
 }
