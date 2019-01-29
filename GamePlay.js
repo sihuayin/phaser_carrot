@@ -30,6 +30,9 @@ class gamePlayScene extends Phaser.Scene {
     for(let i = 1; i < 3; i++) {
       this.load.image(`B${i}`, `res/GamePlay/Object/Theme1/Object/B${i}.png`)
     }
+    for(let i = 1; i < 4; i++) {
+      this.load.image(`Monster_L${i}`, `res/GamePlay/Object/Theme1/Monster/L1${i}.png`)
+    }
     this.load.tilemapTiledJSON({
       key: 'map',
       url: 'res/GamePlay/Theme/Theme1/BG1/Level1.json'
@@ -69,6 +72,8 @@ console.log(frames)
     this.loadTiledMapRectArrayMap()
     this.loadRoadPointArray()
     this.loadObstacle()
+    this.loadRoadMap()
+    this.loadNextGroupMonster()
   }
 
   loadProperty () {
@@ -212,9 +217,10 @@ console.log(frames)
     this.roadPointArray = [];
     var roadGroup = this.map.getObjectLayer("road");
     var roads = roadGroup.objects;
+    var diff = (this.cameras.main.width - this.map.widthInPixels) /2
 
     for (var i = 0; i < roads.length; i++) {
-        this.roadPointArray.push(new Phaser.Geom.Rectangle(roads[i].x, roads[i].y));
+        this.roadPointArray.push(new Phaser.Geom.Rectangle(roads[i].x + diff, roads[i].y));
     }
   }
 
@@ -309,7 +315,7 @@ console.log(frames)
                 index.x = rect.x;
                 index.y = rect.y;
                 isInMap = true;
-                console.log("GPMainLayer.getInfoFromMapByPos() : rect is ", rect);
+                // console.log("GPMainLayer.getInfoFromMapByPos() : rect is ", rect);
             }
         }
     }
@@ -321,6 +327,67 @@ console.log(frames)
         x : index.x,
         y : index.y
     };
+  }
+
+  loadRoadMap () {
+    var roadGroup = this.map.getObjectLayer("road");
+    var roads = roadGroup.objects;
+    var diff = (this.cameras.main.width - this.map.widthInPixels) / 2
+    var currPoint = null;
+    var nextPoint = null;
+    var offsetCount = 0;
+    var info = null;
+    var j = 0;
+    for (var i = 0; i < roads.length - 1; i++) {
+        currPoint = new Phaser.Geom.Rectangle(roads[i].x + diff, roads[i].y);
+        nextPoint = new Phaser.Geom.Rectangle(roads[i + 1].x + diff, roads[i + 1].y);
+
+        info = this.getInfoFromMapByPos(currPoint.x, currPoint.y);
+
+        if (currPoint.y == nextPoint.y) {   // X 轴方向
+            offsetCount = Math.abs(nextPoint.x - currPoint.x) / this.map.tileWidth + 1;
+            // X 轴方向[向左]
+            if (currPoint.x > nextPoint.x) {
+                for (j = 0; j < offsetCount; j++) {
+                    this.tiledMapRectArrayMap[info.row][info.cel - j] = this.tiledMapRectMapEnemu.ROAD;
+                }
+            }else{   // X 轴方向[向右]
+                for (j = 0; j < offsetCount; j++) {
+                    this.tiledMapRectArrayMap[info.row][info.cel + j] = this.tiledMapRectMapEnemu.ROAD;
+                }
+            }
+        }else{   // Y 轴方向
+            offsetCount = Math.abs(nextPoint.y - currPoint.y) / this.map.tileHeight + 1;
+            // Y 轴方向[向下]
+            if (currPoint.y > nextPoint.y){
+                for (j = 0; j < offsetCount; j++) {
+                    this.tiledMapRectArrayMap[info.row - j][info.cel ] = this.tiledMapRectMapEnemu.ROAD;
+                }
+            }else{   // Y 轴方向[向上]
+                for (j = 0; j < offsetCount; j++) {
+                    this.tiledMapRectArrayMap[info.row + j][info.cel ] = this.tiledMapRectMapEnemu.ROAD;
+                }
+            }
+        }
+    }
+
+    // console.log(this.tiledMapRectArrayMap)
+  }
+
+  loadNextGroupMonster () {
+    var monsterData = {
+      road : this.roadPointArray,
+      speed : 0.1,
+      index : 0
+    };
+    // var monster = new Monster(this, 264, 250, 'theme', 'Theme1/Monster/L11.png')
+    var monster = new Monster(this, 264, 250, 'Monster_L11.png')
+
+    monster.setPosition(this.roadPointArray[0].x, this.roadPointArray[0].y);
+
+    monster.setData(monsterData)
+    monster.run()
+    this.add.existing(monster);
   }
   update () {}
 }
