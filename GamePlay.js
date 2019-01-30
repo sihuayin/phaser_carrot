@@ -375,6 +375,11 @@ console.log(frames)
   }
 
   loadNextGroupMonster () {
+    var timedEvent = this.time.addEvent({ delay: 1000, callback: this.createMonster, callbackScope: this, repeat: 4 });
+
+  }
+
+  createMonster() {
     var monsterData = {
       road : this.roadPointArray,
       speed : 0.1,
