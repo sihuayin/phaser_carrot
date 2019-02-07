@@ -1,4 +1,4 @@
-class Monster extends Phaser.GameObjects.Sprite {
+class Monster extends  Phaser.Physics.Arcade.Sprite {
 
   constructor (scene, x, y, texture, frame)
   {
@@ -12,12 +12,15 @@ class Monster extends Phaser.GameObjects.Sprite {
   }
 
   setData (data) {
-    this.data = data;
+    this.configData = data;
     this.speed = data.speed;
     this.road = data.road;
     this.index = data.index;
   }
 
+  setKill (callback) {
+    this.eat = callback
+  }
   run () {
     this.runNextRoad();
     this.playRunAnimation();
@@ -33,7 +36,9 @@ class Monster extends Phaser.GameObjects.Sprite {
     var distance = Phaser.Math.Distance.Between(this.road[this.roadIndex].x, this.road[this.roadIndex].y, this.road[this.roadIndex + 1].x, this.road[this.roadIndex + 1].y);
 
     var time = distance / this.speed;
-
+    if (!this.scene) {
+      return ;
+    }
     var tween = this.scene.tweens.add({
       targets: this,
       props: {
@@ -45,6 +50,10 @@ class Monster extends Phaser.GameObjects.Sprite {
           this.runNextRoad();
         } else {
           // 触发到达了终点
+          this.destroy()
+          if (this.eat) {
+            this.eat(1)
+          }
         }
       }
     });
@@ -63,5 +72,9 @@ class Monster extends Phaser.GameObjects.Sprite {
     
     this.scene.anims.create({ key: 'move', frames: arr, repeat: -1, duration: 150 });
     this.play('move')
+  }
+
+  des () {
+    this.distroy()
   }
 }

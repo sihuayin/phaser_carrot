@@ -1,12 +1,17 @@
 class gamePlayScene extends Phaser.Scene {
   constructor ()
   {
-      // super('game_play');
-      super();
-      this.ZOrderEnum = {};
-      this.tiledMapRectMapEnemu = {};
-      this.tiledMapRectArray = [];
-      this.tiledMapRectArrayMap = [];
+    // super('game_play');
+    super();
+    this.ZOrderEnum = {};
+    this.tiledMapRectMapEnemu = {};
+    this.tiledMapRectArray = [];
+    this.tiledMapRectArrayMap = [];
+    this.touchWarningNode = null;
+    this.towerPanel = null;
+    this.healthValue = 10
+    this.healthText = null
+    
   }
   preload () {
     this.load.atlas('megaset', 'res/GamePlay/Carrot/Carrot1/hlb1.png', 'res/GamePlay/Carrot/Carrot1/hlb1.json');
@@ -21,6 +26,20 @@ class gamePlayScene extends Phaser.Scene {
     this.load.image('start_bt', 'res/GamePlay/Object/Theme1/Object/start01.png')
     this.load.image('start_carrot_hp_bg', 'res/GamePlay/carrot_hp_bg.png')
     this.load.image('blood_number', 'res/Font/num_blood.png')
+    this.load.image('warning', 'res/GamePlay/warning.png')
+    this.load.image('select_01', 'res/GamePlay/select_01.png')
+    this.load.image('Bottle01', 'res/GamePlay/Tower/Bottle/Bottle01.png')
+    this.load.image('Bottle3', 'res/GamePlay/Tower/Bottle/Bottle_3.png')
+    this.load.image('Bottle31', 'res/GamePlay/Tower/Bottle/Bottle31.png')
+    this.load.image('PBottle31', 'res/GamePlay/Tower/Bottle/PBottle31.png')
+    this.load.image('topBg', 'res/GamePlay/UI/top_bg.png')
+    this.load.image('wavesBg', 'res/GamePlay/UI/waves_bg.png')
+    this.load.image('groupInfo', 'res/GamePlay/UI/CN/group_info.png')
+    this.load.image('speed0', 'res/GamePlay/UI/speed_0.png')
+    this.load.image('pause0', 'res/GamePlay/UI/pause_0.png')
+    this.load.image('menu', 'res/GamePlay/UI/menu.png')
+    this.load.image('bottomBg', 'res/GamePlay/UI/bottom_bg.png')
+    this.load.image('advMissionBg', 'res/GamePlay/UI/adv_mission_bg.png')
     for(let i = 1; i < 4; i++) {
       this.load.image(`S${i}`, `res/GamePlay/Object/Theme1/Object/S${i}.png`)
     }
@@ -51,9 +70,11 @@ console.log(frames)
 
         this.add.image(x, y, 'theme', frames[i]);
     }
-
+    this.monsters = this.physics.add.group({ allowGravity: false });
     this.loadBackground()
     this.loadMain()
+    this.loadUI()
+    this.loadTopButtons()
   }
 
   loadBackground () {
@@ -74,8 +95,192 @@ console.log(frames)
     this.loadObstacle()
     this.loadRoadMap()
     this.loadNextGroupMonster()
+
+
+    this.input.on('pointerdown', (pointer, gameObjects) => {
+      // console.log(gameObjects.length > 0 && gameObjects[0].getData('name'))
+      if (gameObjects.length > 0 && gameObjects[0].name === 'bottle') {
+        return ;
+      }
+      pointer.event.preventDefault()
+      var result = this.getInfoFromMapByPos(pointer.downX, pointer.downY);
+      console.log(result)
+      // console.log(pointer)
+      if (!result.isInMap) {
+        this.loadTouchWarning(pointer.downX, pointer.downY);
+      } else if (this.tiledMapRectArrayMap[result.row][result.cel] != this.tiledMapRectMapEnemu.NONE) {
+        this.loadTouchWarning(result.x + this.map.tileWidth / 2, result.y + this.map.tileHeight / 2);
+      } else {
+        if (this.towerPanel == null) {
+          this.loadTowerPanel({
+              cel : result.cel,
+              row : result.row,
+              x :result.x,
+              y: result.y
+          });
+        }else{
+            // self.removeChild(self.towerPanel);
+            this.towerPanel = null;
+        }
+      }
+    })
   }
 
+  loadUI () {
+    this.loadTopBar()
+    this.loadGoldText()
+    this.loadGroupInfo()
+    this.loadBottomBar()
+    this.loadMissionBg()
+    this.loadBottomButtons()
+  }
+
+  loadTopBar () {
+    this.topBar = this.add.container(this.cameras.main.centerX, 0)
+    var topBg = this.add.image(0, 0, 'topBg')
+    topBg.setOrigin(0.5, 0)
+    this.topBar.add(topBg)
+
+    var wavesBg = this.add.image(0, topBg.height/ 2, 'wavesBg')
+    this.topBar.add(wavesBg)
+
+    var groupInfo = this.add.image(0, topBg.height/ 2, 'groupInfo')
+    this.topBar.add(groupInfo)
+  }
+
+  loadGoldText () {
+    var goldStr = '10';
+    var node = this.add.text(170 - this.cameras.main.centerX, 33, goldStr, { fontFamily: 'Arial', fontSize: 32 });
+
+    this.topBar.add(node);
+    this.goldText = node;
+    node.setOrigin(0, 0.5);
+    // node.setPosition(100, 43);
+  }
+
+  loadGroupInfo () {
+    var node = this.add.text(-75, this.topBar.height / 2 + 7, '1', { fontFamily: 'Arial', fontSize: 32 });
+    this.topBar.add(node);
+    this.groupText = node;
+
+    var maxNode = this.add.text(node.x + 50, node.y, '20', { fontFamily: 'Arial', fontSize: 32 });
+    this.topBar.add(maxNode);
+  }
+
+  loadTopButtons () {
+    this.loadSpeedButton();
+    this.loadPauseButton()
+    this.loadMenuButton()
+  }
+
+  loadSpeedButton () {
+    var node = this.add.image(220, 40, 'speed0')
+    this.topBar.add(node);
+  }
+
+  loadPauseButton () {
+    var node = this.add.image(320, 40, 'pause0')
+    // node.setScale(0.2)
+    this.topBar.add(node);
+    // node.setPressedActionEnabled(true);
+    // node.setZoomScale(0.2);
+  }
+
+  loadMenuButton () {
+    var node = this.add.image(390, 40, 'menu')
+    this.topBar.add(node);
+    // 点击事件，显示菜单
+  }
+
+  loadBottomBar () {
+    this.bottomBar = this.add.container(this.cameras.main.centerX, this.cameras.main.height)
+    var node = this.add.image(0, 0, 'bottomBg');
+    
+    this.bottomBar.add(node)
+    node.setOrigin(0.5, 1);
+  }
+
+  loadMissionBg () {
+    var node = this.add.image(205 - this.bottomBar.x, -25, 'advMissionBg')
+    this.bottomBar.add(node)
+  }
+
+  loadBottomButtons () {
+    // 没啥用
+  }
+  loadTowerPanel (args) {
+    var panel = new TowerPanel(this, 0, 0)
+
+    panel.loadProperty(args)
+    panel.setCallback(this.removeTower.bind(this))
+    this.add.existing(panel)
+    this.towerPanel = panel;
+  }
+
+  removeTower () {
+    this.createTower(this.towerPanel)
+    setTimeout(() => {
+      this.towerPanel && this.towerPanel.destroyAll()
+      this.towerPanel = null
+    }, 200)
+  }
+  loadTouchWarning (x, y) {
+    var warningSprite
+    if (this.touchWarningNode !== null) {
+      warningSprite = this.touchWarningNode
+      this.tweens.stop()
+    } else {
+      warningSprite = this.add.sprite(x, y, 'warning')
+    }
+    // 
+    warningSprite.setAlpha(1)
+
+    this.tweens.add({
+      delay: 400,
+      targets: warningSprite,
+      alpha: {warningSprite: 0, duration: 300, ease: 'Expo.easeOut'},
+      onComplete: () => {
+        warningSprite.destroy()
+      }
+    })
+  }
+
+  createTower (data) {
+    console.log(data)
+    let name = data.bot.name
+    if (!name) {
+      console.log('请确定武器名称')
+      return ;
+    }
+
+    var towerData = {};
+    towerData.name = name;
+    towerData.x = data.x;
+    towerData.y = data.y;
+    console.log(data.x, data.y)
+    var node = null;
+    switch (name){
+        case "bottle":
+            towerData.scope = 300;
+            towerData.bulletSpeed = 40;
+            node = new TowerBase(this, data.x, data.y, towerData);
+            node.setOverCallback(() => {
+              this.loadNextGroupMonster()
+            })
+            break;
+        default :
+            console.log("GPMainLayer.createTower() : 异常");
+            break;
+    }
+
+    // 属性设置
+    if (node != null) {
+        // 标记当前位置有塔
+        this.tiledMapRectArrayMap[data.row][data.cel] = this.tiledMapRectMapEnemu.TOWER;
+    }
+
+    return node;
+  }
   loadProperty () {
     this.ZOrderEnum.START        = 10;   // 起点标识
     this.ZOrderEnum.CARROT       = 0;    // 萝卜
@@ -168,7 +373,7 @@ console.log(frames)
     };
 
     this.cache.bitmapFont.add('blood_number', Phaser.GameObjects.RetroFont.Parse(this, config));
-    this.add.bitmapText(this.carrot.x + 42, this.carrot.y + 40, 'blood_number', '10');
+    this.healthText  = this.add.bitmapText(this.carrot.x + 42, this.carrot.y + 40, 'blood_number', this.healthValue + '');
   }
 
   loadCanTouchRect () {
@@ -387,12 +592,22 @@ console.log(frames)
     };
     // var monster = new Monster(this, 264, 250, 'theme', 'Theme1/Monster/L11.png')
     var monster = new Monster(this, 264, 250, 'Monster_L11.png')
-
+    // this.physics.add.existing(monster, false)
     monster.setPosition(this.roadPointArray[0].x, this.roadPointArray[0].y);
 
     monster.setData(monsterData)
+    monster.setKill((val) => {
+      
+      this.healthValue = Math.floor(this.healthValue - val)
+      console.log(this.healthValue)
+      this.healthText.setText(this.healthValue + '')
+    })
     monster.run()
     this.add.existing(monster);
+    
+    // monster.setActive(true);
+    // monster.setVisible(true);
+    this.monsters.add(monster)
   }
   update () {}
 }
