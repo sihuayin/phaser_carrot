@@ -40,6 +40,13 @@ class gamePlayScene extends Phaser.Scene {
     this.load.image('menu', 'res/GamePlay/UI/menu.png')
     this.load.image('bottomBg', 'res/GamePlay/UI/bottom_bg.png')
     this.load.image('advMissionBg', 'res/GamePlay/UI/adv_mission_bg.png')
+    this.load.image('barBlank', 'res/GamePlay/UI/bar_blank.png')
+    this.load.image('bar_bomb_02', 'res/GamePlay/UI/bar_bomb_02.png')
+    this.load.image('bar_blood_02', 'res/GamePlay/UI/bar_blood_02.png')
+    this.load.image('bar_speed_02', 'res/GamePlay/UI/bar_speed_02.png')
+    this.load.image('bar_ice_02', 'res/GamePlay/UI/bar_ice_02.png')
+    this.load.image('bar_slow_02', 'res/GamePlay/UI/bar_slow_02.png')
+    this.load.image('advMenuBg', 'res/GamePlay/UI/adv_menu_bg.png')
     for(let i = 1; i < 4; i++) {
       this.load.image(`S${i}`, `res/GamePlay/Object/Theme1/Object/S${i}.png`)
     }
@@ -74,7 +81,7 @@ console.log(frames)
     this.loadBackground()
     this.loadMain()
     this.loadUI()
-    this.loadTopButtons()
+    
   }
 
   loadBackground () {
@@ -132,6 +139,7 @@ console.log(frames)
     this.loadGroupInfo()
     this.loadBottomBar()
     this.loadMissionBg()
+    this.loadTopButtons()
     this.loadBottomButtons()
   }
 
@@ -187,9 +195,13 @@ console.log(frames)
   }
 
   loadMenuButton () {
-    var node = this.add.image(390, 40, 'menu')
+    var node = this.add.image(390, 40, 'menu').setInteractive()
     this.topBar.add(node);
     // 点击事件，显示菜单
+    node.on('pointerdown', () => {
+      this.scene.pause()
+      this.loadMenus()
+    })
   }
 
   loadBottomBar () {
@@ -206,7 +218,51 @@ console.log(frames)
   }
 
   loadBottomButtons () {
-    // 没啥用
+    var arr = [
+      "bar_bomb_02",
+      "bar_blood_02",
+      "bar_speed_02",
+      "bar_ice_02",
+      "bar_slow_02"
+    ]
+    var nextPosX = -60;
+    var offsetX = 10;
+    var con;
+    var bg;
+    var button
+    for (var i = 0; i < arr.length; i++) {
+      con = this.add.container(nextPosX, -65)
+      bg = this.add.image(0, -15, 'barBlank')
+      bg.setOrigin(0.5, 0);
+      con.add(bg)
+
+      button = this.add.image(0, 20, arr[i])
+      con.add(button)
+      nextPosX += button.width + offsetX;
+      this.bottomBar.add(con)
+    }
+
+    
+  }
+
+  loadMenus () {
+    this.menuPanel = this.add.container(0, 0)
+    var bg = this.add.rectangle(0, 0, this.cameras.main.width, this.cameras.main.height, '0x696969', 0.5)
+    bg.setOrigin(0, 0)
+    this.menuPanel.add(bg)
+
+    // panel
+    var advBg = this.add.image(this.cameras.main.centerX, 0, 'advMenuBg')
+    advBg.setOrigin(0.5, 0)
+    this.menuPanel.add(advBg)
+
+    var levelString = this.add.text(0, 0, '01', { fontFamily: 'Arial', fontSize: 32 });
+    levelString.setPosition(this.cameras.main.centerX - levelString.width / 2, 105)
+    this.menuPanel.add(levelString)
+  }
+
+  removeMenus () {
+
   }
   loadTowerPanel (args) {
     var panel = new TowerPanel(this, 0, 0)
