@@ -47,6 +47,8 @@ class gamePlayScene extends Phaser.Scene {
     this.load.image('bar_ice_02', 'res/GamePlay/UI/bar_ice_02.png')
     this.load.image('bar_slow_02', 'res/GamePlay/UI/bar_slow_02.png')
     this.load.image('advMenuBg', 'res/GamePlay/UI/adv_menu_bg.png')
+    this.load.image('buttonGreen', 'res/UI/btn_green_b.png')
+    this.load.image('advMenuContinue', 'res/GamePlay/UI/CN/adv_menu_continue.png')
     for(let i = 1; i < 4; i++) {
       this.load.image(`S${i}`, `res/GamePlay/Object/Theme1/Object/S${i}.png`)
     }
@@ -199,7 +201,7 @@ console.log(frames)
     this.topBar.add(node);
     // 点击事件，显示菜单
     node.on('pointerdown', () => {
-      this.scene.pause()
+      // this.scene.pause()
       this.loadMenus()
     })
   }
@@ -259,10 +261,23 @@ console.log(frames)
     var levelString = this.add.text(0, 0, '01', { fontFamily: 'Arial', fontSize: 32 });
     levelString.setPosition(this.cameras.main.centerX - levelString.width / 2, 105)
     this.menuPanel.add(levelString)
+
+    var btn = this.add.sprite(bg.width / 2, bg.height / 2 - 105, 'buttonGreen').setInteractive()
+    this.menuPanel.add(btn)
+    var btn1 = this.add.image(btn.x, btn.y, 'advMenuContinue')
+    this.menuPanel.add(btn1)
+    btn1.on('pointerdown', () => {
+      this.continuePlay()
+    })
   }
 
   removeMenus () {
+    // this.scene.play()
+    this.menuPanel.destroy()
+  }
 
+  continuePlay () {
+    this.removeMenus()
   }
   loadTowerPanel (args) {
     var panel = new TowerPanel(this, 0, 0)
