@@ -37,7 +37,8 @@ export class gamePlayScene extends Phaser.Scene {
     }
     this.killReward = 20
     this.monsterSpeedScale = 0.58
-    this.debugPathMarkers = true
+    this.debugPathMarkers = false
+    this.debugGridMarkers = false
 
     this.totalWaves = 0
     this.currentWave = 0
@@ -73,6 +74,10 @@ export class gamePlayScene extends Phaser.Scene {
     )
     this.levelConfig = getLevelConfig(this.levelIndex)
     this.selectedMapIndex = this.levelConfig.mapIndex
+
+    const search = new URLSearchParams(window.location.search)
+    this.debugPathMarkers = search.get('debugPath') === '1'
+    this.debugGridMarkers = search.get('debugGrid') === '1'
   }
 
   preload () {
@@ -216,6 +221,7 @@ export class gamePlayScene extends Phaser.Scene {
     this.loadRoadPointArray()
     this.loadObstacle()
     this.loadRoadMap()
+    this.renderDebugGrid()
     this.registerBuildPlacementInput()
   }
 
@@ -263,6 +269,10 @@ export class gamePlayScene extends Phaser.Scene {
     // empirically-corrected upward shift here instead of the raw Cocos formula.
     const objectLayerYOffsetFix = -this.map.tileHeight
 
+    this.mapOffsetX = offsetX
+    this.mapOffsetY = offsetY
+    this.objectLayerYOffsetFix = objectLayerYOffsetFix
+
     this.mapLayer.setPosition(offsetX, offsetY)
     this.mapLayer.setVisible(false)
 
@@ -283,6 +293,87 @@ export class gamePlayScene extends Phaser.Scene {
     }
   }
 
+  getWorldPositionFromObject (group, obj) {
+    return {
+      x: obj.x + group.finalOffsetX,
+      y: obj.y + group.finalOffsetY
+    }
+  }
+
+  getGridInfoFromMapObject (groupName, obj) {
+    let row = -1
+    let cel = -1
+
+    if (groupName === 'big' || groupName === 'little') {
+      cel = Math.round(obj.x / this.map.tileWidth) - 1
+      row = Math.round(obj.y / this.map.tileHeight)
+    } else {
+      cel = Math.round(obj.x / this.map.tileWidth)
+      row = Math.round(obj.y / this.map.tileHeight) - 1
+    }
+
+    row = Phaser.Math.Clamp(row, 0, this.map.height - 1)
+    cel = Phaser.Math.Clamp(cel, 0, this.map.width - 1)
+
+    const rect = this.tiledMapRectArray[row]?.[cel]
+    return {
+      isInMap: Boolean(rect),
+      row,
+      cel,
+      x: rect?.x ?? -1,
+      y: rect?.y ?? -1
+    }
+  }
+
+  getCellCenter (row, cel) {
+    const rect = this.tiledMapRectArray[row]?.[cel]
+    if (!rect) {
+      return null
+    }
+
+    return {
+      x: rect.x + (rect.width / 2),
+      y: rect.y + (rect.height / 2)
+    }
+  }
+
+  getAlignmentOffset (groupName) {
+    const alignment = this.levelConfig?.alignment ?? {}
+    if (groupName === 'start_end') {
+      return alignment.startEnd ?? { x: 0, y: 0 }
+    }
+    return alignment[groupName] ?? { x: 0, y: 0 }
+  }
+
+  getAlignedWorldPositionFromMapObject (groupName, group, obj) {
+    const worldPoint = this.getWorldPositionFromObject(group, obj)
+    const offset = this.getAlignmentOffset(groupName)
+    return {
+      x: worldPoint.x + offset.x,
+      y: worldPoint.y + offset.y
+    }
+  }
+
+  getSnappedWorldPositionFromMapObject (groupName, group, obj) {
+    const offset = this.getAlignmentOffset(groupName)
+    const info = this.getGridInfoFromMapObject(groupName, obj)
+    if (info.isInMap) {
+      const center = this.getCellCenter(info.row, info.cel)
+      if (center) {
+        return {
+          x: center.x + offset.x,
+          y: center.y + offset.y
+        }
+      }
+    }
+
+    const worldPoint = this.getWorldPositionFromObject(group, obj)
+    return {
+      x: worldPoint.x + offset.x,
+      y: worldPoint.y + offset.y
+    }
+  }
+
   loadStartAndEnd () {
     this.loadStartFlag()
     this.loadEndFlag()
@@ -292,10 +383,11 @@ export class gamePlayScene extends Phaser.Scene {
     const startBt = this.add.sprite(0, 0, 'start_bt').setInteractive()
     const objs = this.map.getObjectLayer('start_end')
     const obj = objs.objects[0]
+    const point = this.getSnappedWorldPositionFromMapObject(objs.name, objs, obj)
 
     startBt.setPosition(
-      obj.x + objs.finalOffsetX,
-      obj.y + objs.finalOffsetY + this.map.tileHeight / 2 + 20
+      point.x,
+      point.y + 20
     )
     startBt.setDepth(25)
 
@@ -313,10 +405,11 @@ export class gamePlayScene extends Phaser.Scene {
     const endBt = this.add.image(0, 0, 'end_sign_pic')
     const objs = this.map.getObjectLayer('start_end')
     const obj = objs.objects[1]
+    const point = this.getSnappedWorldPositionFromMapObject(objs.name, objs, obj)
 
     endBt.setPosition(
-      obj.x + objs.finalOffsetX,
-      obj.y + objs.finalOffsetY + this.map.tileHeight / 2 + 20
+      point.x,
+      point.y + 20
     )
     endBt.setDepth(this.ZOrderEnum.CARROT)
     this.carrot = endBt
@@ -388,10 +481,12 @@ export class gamePlayScene extends Phaser.Scene {
     this.roadPointArray = []
     const roadGroup = this.map.getObjectLayer('road')
     for (const road of roadGroup.objects) {
-      const point = {
-        x: road.x + roadGroup.finalOffsetX,
-        y: road.y + roadGroup.finalOffsetY
+      const point = this.getSnappedWorldPositionFromMapObject(roadGroup.name, roadGroup, road)
+
+      if (!point) {
+        continue
       }
+
       this.roadPointArray.push(point)
 
       if (this.debugPathMarkers) {
@@ -412,12 +507,11 @@ export class gamePlayScene extends Phaser.Scene {
   loadSmallObstacle () {
     const group = this.map.getObjectLayer('small')
     for (const obj of group.objects) {
-      const x = obj.x + group.finalOffsetX
-      const y = obj.y + group.finalOffsetY
+      const { x, y } = this.getAlignedWorldPositionFromMapObject(group.name, group, obj)
       const sprite = this.add.sprite(x, y, obj.name)
       sprite.setDepth(this.ZOrderEnum.OBSTACLE)
 
-      const info = this.getInfoFromMapByPos(x, y)
+      const info = this.getGridInfoFromMapObject(group.name, obj)
       if (info.isInMap) {
         this.tiledMapRectArrayMap[info.row][info.cel] = this.tiledMapRectMapEnemu.SMALL
       }
@@ -427,12 +521,11 @@ export class gamePlayScene extends Phaser.Scene {
   loadLittleObstacle () {
     const group = this.map.getObjectLayer('little')
     for (const obj of group.objects) {
-      const x = obj.x + group.finalOffsetX
-      const y = obj.y + group.finalOffsetY
+      const { x, y } = this.getAlignedWorldPositionFromMapObject(group.name, group, obj)
       const sprite = this.add.sprite(x, y, obj.name)
       sprite.setDepth(this.ZOrderEnum.OBSTACLE)
 
-      const info = this.getInfoFromMapByPos(x, y)
+      const info = this.getGridInfoFromMapObject(group.name, obj)
       if (info.isInMap) {
         this.tiledMapRectArrayMap[info.row][info.cel] = this.tiledMapRectMapEnemu.LITTLE
         if (info.cel - 1 >= 0) {
@@ -445,12 +538,11 @@ export class gamePlayScene extends Phaser.Scene {
   loadBigObstacle () {
     const group = this.map.getObjectLayer('big')
     for (const obj of group.objects) {
-      const x = obj.x + group.finalOffsetX
-      const y = obj.y + group.finalOffsetY
+      const { x, y } = this.getAlignedWorldPositionFromMapObject(group.name, group, obj)
       const sprite = this.add.sprite(x, y, obj.name)
       sprite.setDepth(this.ZOrderEnum.OBSTACLE)
 
-      const info = this.getInfoFromMapByPos(x, y)
+      const info = this.getGridInfoFromMapObject(group.name, obj)
       if (info.isInMap) {
         this.tiledMapRectArrayMap[info.row][info.cel] = this.tiledMapRectMapEnemu.BIG
         if (info.cel - 1 >= 0) {
@@ -469,9 +561,7 @@ export class gamePlayScene extends Phaser.Scene {
   loadInvalidRect () {
     const group = this.map.getObjectLayer('invalid')
     for (const obj of group.objects) {
-      const x = obj.x + group.finalOffsetX
-      const y = obj.y + group.finalOffsetY
-      const info = this.getInfoFromMapByPos(x, y)
+      const info = this.getGridInfoFromMapObject(group.name, obj)
       if (info.isInMap) {
         this.tiledMapRectArrayMap[info.row][info.cel] = this.tiledMapRectMapEnemu.INVALID
       }
@@ -483,35 +573,62 @@ export class gamePlayScene extends Phaser.Scene {
     const roads = roadGroup.objects
 
     for (let i = 0; i < roads.length - 1; i++) {
-      const currPoint = {
-        x: roads[i].x + roadGroup.finalOffsetX,
-        y: roads[i].y + roadGroup.finalOffsetY
-      }
-      const nextPoint = {
-        x: roads[i + 1].x + roadGroup.finalOffsetX,
-        y: roads[i + 1].y + roadGroup.finalOffsetY
-      }
-      const info = this.getInfoFromMapByPos(currPoint.x, currPoint.y)
-      if (!info.isInMap) {
+      const currInfo = this.getGridInfoFromMapObject(roadGroup.name, roads[i])
+      const nextInfo = this.getGridInfoFromMapObject(roadGroup.name, roads[i + 1])
+
+      if (!currInfo.isInMap || !nextInfo.isInMap) {
         continue
       }
 
-      if (currPoint.y === nextPoint.y) {
-        const offsetCount = Math.abs(nextPoint.x - currPoint.x) / this.map.tileWidth + 1
-        for (let step = 0; step < offsetCount; step++) {
-          const nextCel = currPoint.x > nextPoint.x ? info.cel - step : info.cel + step
-          if (nextCel >= 0 && nextCel < this.map.width) {
-            this.tiledMapRectArrayMap[info.row][nextCel] = this.tiledMapRectMapEnemu.ROAD
+      if (currInfo.row === nextInfo.row) {
+        const step = currInfo.cel <= nextInfo.cel ? 1 : -1
+        for (let cel = currInfo.cel; cel !== nextInfo.cel + step; cel += step) {
+          if (cel >= 0 && cel < this.map.width) {
+            this.tiledMapRectArrayMap[currInfo.row][cel] = this.tiledMapRectMapEnemu.ROAD
           }
         }
       } else {
-        const offsetCount = Math.abs(nextPoint.y - currPoint.y) / this.map.tileHeight + 1
-        for (let step = 0; step < offsetCount; step++) {
-          const nextRow = currPoint.y > nextPoint.y ? info.row - step : info.row + step
-          if (nextRow >= 0 && nextRow < this.map.height) {
-            this.tiledMapRectArrayMap[nextRow][info.cel] = this.tiledMapRectMapEnemu.ROAD
+        const step = currInfo.row <= nextInfo.row ? 1 : -1
+        for (let row = currInfo.row; row !== nextInfo.row + step; row += step) {
+          if (row >= 0 && row < this.map.height) {
+            this.tiledMapRectArrayMap[row][currInfo.cel] = this.tiledMapRectMapEnemu.ROAD
           }
         }
+      }
+    }
+  }
+
+  renderDebugGrid () {
+    if (!this.debugGridMarkers) {
+      return
+    }
+
+    const colorMap = {
+      [this.tiledMapRectMapEnemu.ROAD]: 0x2ecc71,
+      [this.tiledMapRectMapEnemu.SMALL]: 0xf39c12,
+      [this.tiledMapRectMapEnemu.LITTLE]: 0xe67e22,
+      [this.tiledMapRectMapEnemu.BIG]: 0xd35400,
+      [this.tiledMapRectMapEnemu.INVALID]: 0x8e44ad,
+      [this.tiledMapRectMapEnemu.TOWER]: 0xe74c3c
+    }
+
+    for (let row = 0; row < this.tiledMapRectArrayMap.length; row++) {
+      for (let cel = 0; cel < this.tiledMapRectArrayMap[row].length; cel++) {
+        const cellType = this.tiledMapRectArrayMap[row][cel]
+        if (cellType === this.tiledMapRectMapEnemu.NONE) {
+          continue
+        }
+
+        const rect = this.tiledMapRectArray[row][cel]
+        const center = this.getCellCenter(row, cel)
+        if (!rect || !center) {
+          continue
+        }
+
+        const box = this.add.rectangle(center.x, center.y, rect.width - 4, rect.height - 4)
+        box.setStrokeStyle(2, colorMap[cellType] ?? 0xffffff, 0.95)
+        box.setFillStyle(colorMap[cellType] ?? 0xffffff, 0.08)
+        box.setDepth(119)
       }
     }
   }

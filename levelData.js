@@ -71,7 +71,15 @@ export const LEVEL_DATA = RAW_LEVEL_DATA.map((level, index) => ({
   ...level,
   levelIndex: index,
   mapIndex: Math.min(index + 1, 3),
-  maxGroup: level.group ?? level.monsterGroup.length
+  maxGroup: level.group ?? level.monsterGroup.length,
+  alignment: {
+    road: { x: 0, y: 0 },
+    startEnd: { x: 0, y: 0 },
+    small: { x: 0, y: 0 },
+    little: { x: 0, y: 0 },
+    big: { x: 0, y: 0 },
+    ...(level.alignment ?? {})
+  }
 }))
 
 export function getLevelConfig (levelIndex = 0) {
