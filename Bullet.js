@@ -1,4 +1,6 @@
-class Bullet extends  Phaser.Physics.Arcade.Sprite {
+import Phaser from 'phaser'
+
+export class Bullet extends  Phaser.Physics.Arcade.Sprite {
   constructor (scene) {
     super(scene, 0, 0)
 

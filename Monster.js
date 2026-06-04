@@ -1,21 +1,39 @@
-class Monster extends  Phaser.Physics.Arcade.Sprite {
+import Phaser from 'phaser'
+import themeAtlasData from './res/GamePlay/Object/Theme1/Monster/my_theme_1.json'
+
+export class Monster extends  Phaser.Physics.Arcade.Sprite {
+  static PATH_FOLLOW_OFFSET_X = 0
+  static PATH_FOLLOW_OFFSET_Y = 0
 
   constructor (scene, x, y, texture, frame)
   {
-      super(scene, x, y);
+      super(scene, x, y)
       this.scene = scene
 
       frame && this.setTexture(texture, frame) || this.setTexture(texture)
-      this.setPosition(x, y);
-      this.setOrigin(0, 0);
+      this.setPosition(
+        x + Monster.PATH_FOLLOW_OFFSET_X,
+        y + Monster.PATH_FOLLOW_OFFSET_Y
+      )
+      this.setScale(0.68)
+      this.setOrigin(0.5, 0.5)
       this.roadIndex = 0
+      this.centerDebugMarker = null
+      this.lastAlignedFrameName = null
+
+      if (this.scene.debugPathMarkers) {
+        this.centerDebugMarker = this.scene.add.circle(this.x, this.y, 5, 0xe74c3c, 0.95)
+        this.centerDebugMarker.setDepth(121)
+        this.centerDebugMarker.setStrokeStyle(2, 0x7b241c, 1)
+      }
   }
 
   setData (data) {
-    this.configData = data;
-    this.speed = data.speed;
-    this.road = data.road;
-    this.index = data.index;
+    this.configData = data
+    this.speed = data.speed
+    this.road = data.road
+    this.index = data.index
+    this.namePrefix = data.namePrefix
   }
 
   setKill (callback) {
@@ -30,51 +48,109 @@ class Monster extends  Phaser.Physics.Arcade.Sprite {
     // 转方向
     if (this.road[this.roadIndex].x <= this.road[this.roadIndex + 1].x) {
       this.setFlipX(false)
-    }else{
-      this.setFlipX(true);
+    } else {
+      this.setFlipX(true)
     }
-    var distance = Phaser.Math.Distance.Between(this.road[this.roadIndex].x, this.road[this.roadIndex].y, this.road[this.roadIndex + 1].x, this.road[this.roadIndex + 1].y);
+    const distance = Phaser.Math.Distance.Between(this.road[this.roadIndex].x, this.road[this.roadIndex].y, this.road[this.roadIndex + 1].x, this.road[this.roadIndex + 1].y)
 
-    var time = distance / this.speed;
+    // Cocos moveTo uses seconds; Phaser tween duration uses milliseconds.
+    const time = Math.max(120, (distance / this.speed) * 1000)
     if (!this.scene) {
-      return ;
+      return
     }
-    var tween = this.scene.tweens.add({
+    this.scene.tweens.add({
       targets: this,
       props: {
-        x: {value: this.road[this.roadIndex + 1].x, ease: 'Power1', duration: time,},
-        y: {value: this.road[this.roadIndex + 1].y, ease: 'Power1', duration: time,}
+        x: {
+          value: this.road[this.roadIndex + 1].x + Monster.PATH_FOLLOW_OFFSET_X,
+          ease: 'Power1',
+          duration: time
+        },
+        y: {
+          value: this.road[this.roadIndex + 1].y + Monster.PATH_FOLLOW_OFFSET_Y,
+          ease: 'Power1',
+          duration: time
+        }
       },
       onComplete: () => {
         if (this.roadIndex < this.road.length - 1) {
-          this.runNextRoad();
+          this.runNextRoad()
         } else {
-          // 触发到达了终点
-          this.destroy()
           if (this.eat) {
-            this.eat(1)
+            this.eat(this)
+          } else {
+            this.destroy()
           }
         }
       }
-    });
+    })
 
-    this.roadIndex++;
+    this.roadIndex++
   }
 
   playRunAnimation () {
-    const arr = []
-    for(let i = 1; i < 4; i ++) {
-      arr.push({
-        key: `Monster_L${i}`
+    const animationKey = `monster_move_${this.namePrefix}`
+    if (!this.scene.anims.exists(animationKey)) {
+      const frames = []
+      for (let i = 1; i < 4; i++) {
+        frames.push({
+          key: 'theme',
+          frame: `Theme1/Monster/${this.namePrefix}${i}.png`
+        })
+      }
+
+      this.scene.anims.create({
+        key: animationKey,
+        frames,
+        repeat: -1,
+        frameRate: 6.67
       })
     }
-    // var configArr = this.scene.anims.generateFrameNames('theme', { prefix: 'Theme1/Monster/L', start: 11, end: 13, zeroPad: 0, suffix: '.png',frames: true})
-    
-    this.scene.anims.create({ key: 'move', frames: arr, repeat: -1, duration: 150 });
-    this.play('move')
+
+    this.play(animationKey)
+  }
+
+  applyFrameAlignment () {
+    const frameName = this.frame?.name
+    if (!frameName || this.lastAlignedFrameName === frameName) {
+      return
+    }
+
+    const atlasFrame = themeAtlasData.frames[frameName]
+    if (!atlasFrame) {
+      this.lastAlignedFrameName = frameName
+      return
+    }
+
+    const visibleWidth = atlasFrame.frame.w
+    const visibleHeight = atlasFrame.frame.h
+    const centerOffsetX = atlasFrame.spriteSourceSize.x + (atlasFrame.spriteSourceSize.w / 2) - (atlasFrame.sourceSize.w / 2)
+    const centerOffsetY = atlasFrame.spriteSourceSize.y + (atlasFrame.spriteSourceSize.h / 2) - (atlasFrame.sourceSize.h / 2)
+
+    this.setDisplayOrigin(
+      (visibleWidth / 2) + centerOffsetX,
+      (visibleHeight / 2) + centerOffsetY
+    )
+
+    this.lastAlignedFrameName = frameName
+  }
+
+  preUpdate (time, delta) {
+    super.preUpdate(time, delta)
+    this.applyFrameAlignment()
+    if (this.centerDebugMarker) {
+      this.centerDebugMarker.setPosition(this.x, this.y)
+    }
   }
 
   des () {
-    this.distroy()
+    this.centerDebugMarker?.destroy()
+    this.destroy()
+  }
+
+  destroy (fromScene) {
+    this.centerDebugMarker?.destroy()
+    this.centerDebugMarker = null
+    return super.destroy(fromScene)
   }
 }

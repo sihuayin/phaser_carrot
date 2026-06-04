@@ -1,4 +1,6 @@
-class LevelEffect extends Phaser.GameObjects.Sprite {
+import Phaser from 'phaser'
+
+export class LevelEffect extends Phaser.GameObjects.Sprite {
 
   constructor (scene, x, y)
   {

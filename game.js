@@ -1,4 +1,19 @@
-class mainScene {
+import Phaser from 'phaser'
+
+export class mainScene extends Phaser.Scene {
+  constructor() {
+    super('main_menu')
+    this.actionDuration = 1000
+    this.isUnlock = 'NO'
+    this.bgMusic = null
+    this.selectMusic = null
+    this.lockButton = null
+    this.pop = null
+    this.path = null
+    this.curve = null
+    this.carrot = null
+  }
+
   preload() {
     this.load.image('bg', 'res/MainMenu/zh/front_bg.png')
     this.load.image('start_normal', 'res/MainMenu/zh/front_btn_start_normal.png')
@@ -16,13 +31,12 @@ class mainScene {
     this.load.image('front_smoke_1', 'res/MainMenu/front_smoke_3.png')
     this.load.image('front_smoke_2', 'res/MainMenu/front_smoke_2.png')
     this.load.image('front_right_yellow', 'res/MainMenu/front_monster_5.png')
-    this.load.image('front_left_Blue', 'res/MainMenu/front_monster_2.png')
+    this.load.image('front_left_blue', 'res/MainMenu/front_monster_2.png')
     this.load.image('front_carrot', 'res/MainMenu/front_carrot.png')
     this.load.image('front_bg', 'res/MainMenu/front_front.png')
     this.load.image('front_btn_lock', 'res/MainMenu/front_btn_floor_locked.png')
     this.load.image('front_pop_sure', 'res/UI/btn_blue_m.png')
     this.load.image('front_pop_sure_pressed', 'res/UI/btn_blue_m_pressed.png')
-
     this.load.image('front_pop_bg', 'res/Common/bg/woodbg_notice.png')
     this.load.image('front_pop_info', 'res/MainMenu/unlock_floor.png')
     this.load.image('front_pop_sure_ok', 'res/UI/zh/btn_blue_m_ok.png')
@@ -33,211 +47,237 @@ class mainScene {
     this.load.audio('front_bg_music', 'res/Sound/MainMenu/BGMusic.mp3')
     this.load.audio('front_select_music', 'res/Sound/MainMenu/Select.mp3')
   }
+
   create() {
-    
-    let bg = this.add.image(0, 0, 'bg')
-  //  console.log(this)
-    bg.setPosition(this.cameras.main.centerX, this.cameras.main.centerY)
-    let bgMusic = this.sound.add('front_bg_music', { loop: true })
-    let selectMusic = this.sound.add('front_select_music')
-    bgMusic.play()
+    this.loadConfig()
+    this.loadBackgroundLayer()
+    this.loadAudio()
+    this.loadMenu()
+    this.loadSet()
+    this.loadHelp()
+    this.loadBackMonster()
+    this.loadBackSmoke()
+    this.loadForeMonster()
+    this.loadForeSmoke()
+    this.loadCarrot()
+    this.loadForeground()
+    this.loadUnlockLayer()
+  }
 
-    // 开始按钮
-    this.startBtn = this.add.sprite(0, 0, 'start_normal').setInteractive();
-    this.startBtn.on('pointerdown', (event) => {
-      selectMusic.play()
+  loadConfig() {
+    this.isUnlock = window.localStorage.getItem('isUnLock') || 'NO'
+  }
+
+  loadAudio() {
+    this.bgMusic = this.sound.add('front_bg_music', { loop: true })
+    this.selectMusic = this.sound.add('front_select_music')
+    if (!this.bgMusic.isPlaying) {
+      this.bgMusic.play()
+    }
+  }
+
+  loadBackgroundLayer() {
+    const bg = this.add.image(this.cameras.main.centerX, this.cameras.main.centerY, 'bg')
+    bg.setDepth(0)
+  }
+
+  loadMenu() {
+    this.startBtn = this.add.sprite(this.cameras.main.centerX - 8, this.cameras.main.centerY - 75, 'start_normal').setInteractive()
+    this.startBtn.on('pointerdown', () => {
+      this.selectMusic.play()
       this.startBtn.setTexture('start_press')
-      this.scene.stop();
-      this.scene.run('level_select');
-    });
-    this.startBtn.on('pointerout', (event) => { 
+      this.scene.start('level_select')
+    })
+    this.startBtn.on('pointerout', () => {
       this.startBtn.setTexture('start_normal')
-    });
+    })
+    this.startBtn.on('pointerup', () => {
+      this.startBtn.setTexture('start_normal')
+    })
 
-    this.startBtn.setPosition(this.cameras.main.centerX - 8, this.cameras.main.centerY - 75)
-
-    // sfloor
-    this.floorBtn = this.add.sprite(0, 0, 'floor_normal').setInteractive();
-    this.floorBtn.on('pointerdown', (event) => { 
-      selectMusic.play()
+    this.floorBtn = this.add.sprite(this.cameras.main.centerX - 8, this.cameras.main.centerY + 45, 'floor_normal').setInteractive()
+    this.floorBtn.on('pointerdown', () => {
+      this.selectMusic.play()
       this.floorBtn.setTexture('floor_press')
       if (this.isUnlock === 'NO') {
-        console.log('jiesuo') 
         this.pop.setVisible(true)
+      } else {
+        this.showTodoTip()
       }
-    });
-    this.floorBtn.on('pointerout', (event) => { 
+    })
+    this.floorBtn.on('pointerout', () => {
       this.floorBtn.setTexture('floor_normal')
-    });
+    })
+    this.floorBtn.on('pointerup', () => {
+      this.floorBtn.setTexture('floor_normal')
+    })
 
-    this.floorBtn.setPosition(this.cameras.main.centerX - 8, this.cameras.main.centerY + 45)
-
-    // locked front_btn_lock
-    this.isUnlock = window.localStorage.getItem('isUnLock') || 'NO';
-    this.lockButton = this.add.sprite(this.floorBtn.x + 135, this.floorBtn.y / 2 + 160, 'front_btn_lock')
-    if (this.isUnlock !== 'NO') {
-      this.lockButton .destroy()
+    if (this.isUnlock === 'NO') {
+      this.lockButton = this.add.sprite(this.floorBtn.x + 135, this.floorBtn.y / 2 + 160, 'front_btn_lock')
     }
-    // 添加怪物
-    let master = this.add.sprite(0, 0, 'front_master')
-    // 添加设置
-    let setting = this.add.sprite(32, 45, 'front_setting')
-    var container = this.add.container(this.cameras.main.centerX - 350, this.cameras.main.height - 490, [ master, setting ])
-    // 上下移动的动画
-    var tween = this.tweens.add({
-      targets: container,
-      props: {
-        y: { value: this.cameras.main.height - 480, duration: 1000, ease: 'Power0', yoyo: true,repeat: -1 }
-      }
-    });
+  }
 
-    // 添加帮助图片
-    let helpHandBt = this.add.sprite(0, 0, 'front_help_hand')
-    let helpBt = this.add.sprite(5, -150, 'front_help')
-    let helpContainer1 = this.add.container(0, 0, [helpHandBt, helpBt])
-    // 手臂动画
+  loadSet() {
+    const master = this.add.sprite(0, 0, 'front_master')
+    const setting = this.add.sprite(157, 80, 'front_setting')
+    const container = this.add.container(this.cameras.main.centerX - 350, 490, [master, setting])
+
     this.tweens.add({
-      targets: helpContainer1,
-      props: {
-        angle: { value: 5, duration: 800, ease: 'Power0', yoyo: true,repeat: -1 }
-      }
-    });
-    let helpMonster = this.add.sprite(125, 0, 'front_help_monster')
-    this.add.container(this.cameras.main.centerX + 270, this.cameras.main.height - 270, [helpContainer1, helpMonster])
-    
-    // 背景的怪物 
-    let leftYellow = this.add.sprite(this.cameras.main.centerX - 360, this.cameras.main.height - 220, 'front_left_yellow')
+      targets: container,
+      y: { value: 480, duration: this.actionDuration, ease: 'Sine.easeInOut', yoyo: true, repeat: -1 }
+    })
+  }
+
+  loadHelp() {
+    const helpHand = this.add.sprite(0, 0, 'front_help_hand')
+    const help = this.add.sprite(155, 365, 'front_help')
+    const helpContainer = this.add.container(this.cameras.main.centerX + 270, 270, [helpHand, help])
+
+    this.tweens.add({
+      targets: helpContainer,
+      angle: { value: 5, duration: this.actionDuration * 0.8, ease: 'Sine.easeInOut', yoyo: true, repeat: -1 }
+    })
+
+    const helpBody = this.add.sprite(this.cameras.main.centerX + 400, 280, 'front_help_monster')
+    this.tweens.add({
+      targets: helpBody,
+      y: { value: 285, duration: this.actionDuration * 2, ease: 'Sine.easeInOut', yoyo: true, repeat: -1 }
+    })
+  }
+
+  loadBackMonster() {
+    const leftYellow = this.add.sprite(this.cameras.main.centerX - 360, 220, 'front_left_yellow')
     this.tweens.add({
       targets: leftYellow,
-      props: {
-        y: { value: this.cameras.main.height - 225, duration: 800, ease: 'Power0', yoyo: true,repeat: -1 }
-      }
-    });
+      y: { value: 225, duration: this.actionDuration * 0.8, ease: 'Sine.easeInOut', yoyo: true, repeat: -1 }
+    })
 
-    let leftGreen = this.add.sprite(this.cameras.main.centerX - 300, this.cameras.main.height - 185, 'front_left_green')
+    const leftGreen = this.add.sprite(this.cameras.main.centerX - 300, 185, 'front_left_green')
     this.tweens.add({
       targets: leftGreen,
-      props: {
-        x: { value: this.cameras.main.centerX - 303, duration: 700, ease: 'Power0', yoyo: true,repeat: -1 }
-      }
-    });
+      x: { value: this.cameras.main.centerX - 303, duration: this.actionDuration * 0.7, ease: 'Sine.easeInOut', yoyo: true, repeat: -1 }
+    })
+  }
 
-    // 背景烟
-    this.add.sprite(this.cameras.main.centerX - 410, this.cameras.main.height - 188, 'front_smoke')
-    this.add.sprite(this.cameras.main.centerX + 450,  this.cameras.main.height - 190, 'front_smoke_1')
+  loadBackSmoke() {
+    this.add.sprite(this.cameras.main.centerX - 410, 188, 'front_smoke')
+    this.add.sprite(this.cameras.main.centerX + 405, 190, 'front_smoke_1')
+  }
 
-    // 
-    let rightYellow = this.add.sprite(this.cameras.main.centerX + 290,  this.cameras.main.height - 185, 'front_right_yellow')
+  loadForeMonster() {
+    const rightYellow = this.add.sprite(this.cameras.main.centerX + 290, 185, 'front_right_yellow')
     this.tweens.add({
       targets: rightYellow,
-      props: {
-        x: { value: this.cameras.main.centerX + 295, duration: 850, ease: 'Power0', yoyo: true,repeat: -1 }
-      }
-    });
+      x: { value: this.cameras.main.centerX + 295, duration: this.actionDuration * 0.85, ease: 'Sine.easeInOut', yoyo: true, repeat: -1 }
+    })
 
-    //
-    let leftBlue = this.add.sprite(this.cameras.main.centerX - 300,  this.cameras.main.height - 150, 'front_left_Blue')
+    const leftBlue = this.add.sprite(this.cameras.main.centerX - 300, 150, 'front_left_blue')
     this.tweens.add({
       targets: leftBlue,
       x: this.cameras.main.centerX - 220,
-      y: this.cameras.main.height - 170,
+      y: 170,
+      duration: this.actionDuration * 0.2,
       ease: 'Power1',
-      duration: 200,
       onComplete: () => {
         this.tweens.add({
           targets: leftBlue,
-          props: {
-            y: { value: this.cameras.main.height - 175, duration: 850, ease: 'Power0', yoyo: true,repeat: -1 }
-          }
+          y: { value: 165, duration: this.actionDuration * 0.55, ease: 'Sine.easeInOut', yoyo: true, repeat: -1 }
         })
       }
-    });
+    })
+  }
 
-    this.add.sprite(this.cameras.main.centerX + 320, this.cameras.main.height - 150, 'front_smoke_2')
+  loadForeSmoke() {
+    this.add.sprite(this.cameras.main.centerX + 320, 150, 'front_smoke_2')
+  }
 
-    this.carrot = this.add.sprite(this.cameras.main.centerX + 320, this.cameras.main.height - 120, 'front_carrot')
-    // 放大效果
-    this.carrot.scaleX = 0.7;
-    this.carrot.scaleY = 0.7;
+  loadCarrot() {
+    this.carrot = this.add.sprite(this.cameras.main.centerX + 320, 120, 'front_carrot')
+    this.carrot.setScale(0.7)
 
+    this.path = { t: 0, vec: new Phaser.Math.Vector2() }
+    const startPoint = new Phaser.Math.Vector2(this.cameras.main.centerX + 320, 120)
+    const controlPoint1 = new Phaser.Math.Vector2(this.cameras.main.centerX + 400, 100)
+    const controlPoint2 = new Phaser.Math.Vector2(this.cameras.main.centerX + 120, 0)
+    const endPoint = new Phaser.Math.Vector2(this.cameras.main.centerX + 100, 20)
+    this.curve = new Phaser.Curves.CubicBezier(startPoint, controlPoint1, controlPoint2, endPoint)
+
+    this.tweens.add({
+      targets: this.path,
+      t: 1,
+      ease: 'Power1',
+      duration: this.actionDuration * 0.8
+    })
     this.tweens.add({
       targets: this.carrot,
-      props: {
-        scaleX: { value: 1, duration: 800, ease: 'Power0'},
-        scaleY: { value: 1, duration: 800, ease: 'Power0'}
-      }
-    });
-    
-    this.path = { t: 0, vec: new Phaser.Math.Vector2()};
-
-    var startPoint = new Phaser.Math.Vector2(this.cameras.main.centerX + 320, this.cameras.main.height - 120);
-    var controlPoint1 = new Phaser.Math.Vector2(this.cameras.main.centerX + 400, this.cameras.main.height - 100);
-    var controlPoint2 = new Phaser.Math.Vector2(this.cameras.main.centerX + 120, this.cameras.main.height);
-    var endPoint = new Phaser.Math.Vector2(this.cameras.main.centerX + 100, this.cameras.main.height - 20);
-
-    this.curve = new Phaser.Curves.CubicBezier(startPoint, controlPoint1, controlPoint2, endPoint);
-
-    this.tweens.add({
-        targets: this.path,
-        t: 1,
-        ease: 'Power1',
-        duration: 800
-    });
-
-    this.add.sprite(this.cameras.main.centerX, this.cameras.main.centerY, 'front_bg')
-
-    this.renderLayer()
+      scaleX: 1,
+      scaleY: 1,
+      duration: this.actionDuration * 0.8,
+      ease: 'Power1'
+    })
   }
 
-  /*
-   * popup layer
-   */
-  renderLayer () {
-    var bg1 = this.add.sprite(this.cameras.main.centerX, this.cameras.main.centerY, 'front_pop_bg')
-    var bg2 = this.add.sprite(this.cameras.main.centerX, this.cameras.main.centerY - 100, 'front_pop_info')
+  loadForeground() {
+    this.add.sprite(this.cameras.main.centerX, this.cameras.main.centerY, 'front_bg')
+  }
 
-    var bg3 = this.add.container(420, 420)
-    // 开始按钮
-    var sureButton = this.add.sprite(0, 0, 'front_pop_sure').setInteractive()
-    var sureText = this.add.sprite(0,0 ,'front_pop_sure_ok')
-    bg3.add(sureButton)
-    bg3.add(sureText)
- 
+  loadUnlockLayer() {
+    const overlay = this.add.rectangle(0, 0, this.cameras.main.width, this.cameras.main.height, 0x000000, 0.86)
+    overlay.setOrigin(0, 0)
 
-    sureButton.on('pointerdown', (event) => {
-      sureButton.setTexture('front_pop_sure_pressed')
-      // 解锁
-      // 发送请求处理
-      // 本地保存
+    const bg = this.add.sprite(this.cameras.main.centerX, this.cameras.main.centerY, 'front_pop_bg')
+    const info = this.add.sprite(this.cameras.main.centerX, this.cameras.main.centerY - 100, 'front_pop_info')
+
+    const confirmButton = this.add.sprite(420, 420, 'front_pop_sure').setInteractive()
+    const confirmText = this.add.sprite(420, 420, 'front_pop_sure_ok')
+    confirmButton.on('pointerdown', () => {
+      confirmButton.setTexture('front_pop_sure_pressed')
       window.localStorage.setItem('isUnLock', 'YES')
-      // 清除锁
-      this.lockButton && this.lockButton.destroy()
       this.isUnlock = 'YES'
+      this.lockButton && this.lockButton.destroy()
       this.pop.setVisible(false)
-    });
+      confirmButton.setTexture('front_pop_sure')
+    })
 
-    var bg4 = this.add.container(720, 420)
-    // 取消按钮
-    var cancelButton = this.add.sprite(0, 0, 'front_pop_cancel').setInteractive()
-    var cancelText = this.add.sprite(0,0 ,'front_pop_cancel_text')
-
-    bg4.add(cancelButton)
-    bg4.add(cancelText)
-
-    cancelButton.on('pointerdown', (event) => {
+    const cancelButton = this.add.sprite(720, 420, 'front_pop_cancel').setInteractive()
+    const cancelText = this.add.sprite(720, 420, 'front_pop_cancel_text')
+    cancelButton.on('pointerdown', () => {
       cancelButton.setTexture('front_pop_cancel_pressed')
       this.pop.setVisible(false)
-    });
+      cancelButton.setTexture('front_pop_cancel')
+    })
 
-    this.pop = this.add.container(0,0, [bg1, bg2, bg3, bg4])
+    this.pop = this.add.container(0, 0, [overlay, bg, info, confirmButton, confirmText, cancelButton, cancelText])
+    this.pop.setDepth(100)
     this.pop.setVisible(false)
   }
-  onStartClick() {
 
+  showTodoTip() {
+    const text = this.add.text(this.cameras.main.centerX, this.cameras.main.centerY + 120, '天天向上模式暂未接入', {
+      fontFamily: 'Arial',
+      fontSize: 24,
+      color: '#fff4b1',
+      stroke: '#4a341d',
+      strokeThickness: 4
+    })
+    text.setOrigin(0.5, 0.5)
+    text.setDepth(120)
+    this.tweens.add({
+      targets: text,
+      alpha: { value: 0, duration: 1400, ease: 'Quad.easeOut' },
+      y: this.cameras.main.centerY + 90,
+      duration: 1400,
+      onComplete: () => {
+        text.destroy()
+      }
+    })
   }
-  update() {
 
-    var position = this.curve.getPoint(this.path.t, this.path.vec);
+  update() {
+    if (!this.curve || !this.path || !this.carrot) {
+      return
+    }
+    const position = this.curve.getPoint(this.path.t, this.path.vec)
     this.carrot.setPosition(position.x, position.y)
   }
 }

@@ -2,23 +2,32 @@
 <html>
   <head>
     <meta charset="UTF-8">
-    <title>My First Phaser Game</title>
-    <script src="https://cdn.jsdelivr.net/npm/phaser@3.14.0/dist/phaser.js"></script>
-    <script src="game.js"></script>
-    <script src="unlock.js"></script>
-    <script src="levelEffect.js"></script>
-    <script src="levelSelect.js"></script>
-    <script src="Monster.js"></script>
-    <script src="TowerPanel.js"></script>
-    <script src="TowerBase.js"></script>
-    <script src="Bullet.js"></script>
-    <script src="Bottle.js"></script>
-    <script src="GamePlay.js"></script>
-    <script src="start.js"></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Phaser Carrot Defense</title>
+    <style>
+      body {
+        margin: 0;
+        font-family: Arial, sans-serif;
+        background: #f4efe6;
+        color: #4a341d;
+      }
+
+      main {
+        padding: 16px;
+      }
+
+      h1,
+      p {
+        margin: 0 0 12px;
+      }
+    </style>
+    <script type="module" src="/start.js"></script>
   </head>
   <body>
-    <h1>My First Phaser Game</h1>
-    <div id="game"></div>
-    <p>Use the arrow keys to move around and collect the coins.</p>
+    <main>
+      <h1>Phaser Carrot Defense</h1>
+      <div id="game"></div>
+      <p>Open the main menu, choose a level, and defend the carrot.</p>
+    </main>
   </body>
 </html>

@@ -1,4 +1,7 @@
-class TowerBase {
+import Phaser from 'phaser'
+import { Bottle } from './Bottle.js'
+
+export class TowerBase {
   constructor (scene, x, y, config) {
     this.scene = scene;
     this.x = x;
@@ -14,10 +17,11 @@ class TowerBase {
     this.cel = -1;
 
     this.container = scene.add.container(0, 0)
+    this.container.setDepth(6)
     let bg = scene.add.sprite(x, y, 'Bottle3')
     this.container.add(bg)
     
-    // this.loadProperty(config);
+    this.loadProperty(config);
     this.loadWeapon();
   }
 
@@ -35,8 +39,7 @@ class TowerBase {
     this.scope = config.scope;
     this.bulletSpeed = config.bulletSpeed;
     this.bulletMoveTime = 100 / this.bulletSpeed;
-    this.setPosition(this.x, this.y)
-    this.setName(config.name)
+    this.name = config.name
   }
 
   loadWeapon () {
@@ -70,7 +73,7 @@ class TowerBase {
   }
 
   onFire () {
-    cc.warn("TowerBase.onFire() : 请重写此方法！");
+    console.warn("TowerBase.onFire() : 请重写此方法！");
   }
   getCel () {
       return this.cel;

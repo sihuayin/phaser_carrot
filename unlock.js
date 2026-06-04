@@ -1,4 +1,4 @@
-class unlockScene {
+export class unlockScene {
   create() {
     console.log('test')
   }
