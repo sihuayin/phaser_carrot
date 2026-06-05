@@ -13,6 +13,12 @@ export class gamePlayScene extends Phaser.Scene {
     this.tiledMapRectArray = []
     this.tiledMapRectArrayMap = []
     this.roadPointArray = []
+    this.roadPointMarkerNodes = []
+    this.obstacleNodes = {
+      small: [],
+      little: [],
+      big: []
+    }
 
     this.touchWarningNode = null
     this.touchWarningTween = null
@@ -39,6 +45,10 @@ export class gamePlayScene extends Phaser.Scene {
     this.monsterSpeedScale = 0.58
     this.debugPathMarkers = false
     this.debugGridMarkers = false
+    this.debugAlignmentMode = false
+    this.debugAlignmentTarget = 'road'
+    this.debugAlignmentStep = 1
+    this.runtimeAlignmentOffsets = {}
 
     this.totalWaves = 0
     this.currentWave = 0
@@ -59,6 +69,7 @@ export class gamePlayScene extends Phaser.Scene {
     this.speedButton = null
     this.startButton = null
     this.waveHintText = null
+    this.alignmentDebugText = null
 
     this.gameSpeedOptions = [1, 2]
     this.gameSpeedIndex = 0
@@ -78,6 +89,7 @@ export class gamePlayScene extends Phaser.Scene {
     const search = new URLSearchParams(window.location.search)
     this.debugPathMarkers = search.get('debugPath') === '1'
     this.debugGridMarkers = search.get('debugGrid') === '1'
+    this.debugAlignmentMode = search.get('debugAlign') === '1'
   }
 
   preload () {
@@ -183,6 +195,12 @@ export class gamePlayScene extends Phaser.Scene {
     this.tiledMapRectArray = []
     this.tiledMapRectArrayMap = []
     this.roadPointArray = []
+    this.roadPointMarkerNodes = []
+    this.obstacleNodes = {
+      small: [],
+      little: [],
+      big: []
+    }
     this.touchWarningNode = null
     this.touchWarningTween = null
     this.towerPanel = null
@@ -204,6 +222,8 @@ export class gamePlayScene extends Phaser.Scene {
     this.menuPanel = null
     this.resultPanel = null
     this.gameSpeedIndex = 0
+    this.runtimeAlignmentOffsets = {}
+    this.alignmentDebugText = null
   }
 
   loadBackground () {
@@ -223,6 +243,7 @@ export class gamePlayScene extends Phaser.Scene {
     this.loadRoadMap()
     this.renderDebugGrid()
     this.registerBuildPlacementInput()
+    this.registerAlignmentDebugKeys()
   }
 
   loadUI () {
@@ -234,6 +255,7 @@ export class gamePlayScene extends Phaser.Scene {
     this.loadTopButtons()
     this.loadBottomButtons()
     this.loadWaveHintText()
+    this.loadAlignmentDebugText()
   }
 
   loadProperty () {
@@ -339,10 +361,25 @@ export class gamePlayScene extends Phaser.Scene {
 
   getAlignmentOffset (groupName) {
     const alignment = this.levelConfig?.alignment ?? {}
+    const runtimeOffset = this.runtimeAlignmentOffsets[groupName]
     if (groupName === 'start_end') {
-      return alignment.startEnd ?? { x: 0, y: 0 }
+      const baseOffset = alignment.startEnd ?? { x: 0, y: 0 }
+      if (!runtimeOffset) {
+        return baseOffset
+      }
+      return {
+        x: baseOffset.x + runtimeOffset.x,
+        y: baseOffset.y + runtimeOffset.y
+      }
     }
-    return alignment[groupName] ?? { x: 0, y: 0 }
+    const baseOffset = alignment[groupName] ?? { x: 0, y: 0 }
+    if (!runtimeOffset) {
+      return baseOffset
+    }
+    return {
+      x: baseOffset.x + runtimeOffset.x,
+      y: baseOffset.y + runtimeOffset.y
+    }
   }
 
   getAlignedWorldPositionFromMapObject (groupName, group, obj) {
@@ -382,8 +419,7 @@ export class gamePlayScene extends Phaser.Scene {
   loadStartFlag () {
     const startBt = this.add.sprite(0, 0, 'start_bt').setInteractive()
     const objs = this.map.getObjectLayer('start_end')
-    const obj = objs.objects[0]
-    const point = this.getSnappedWorldPositionFromMapObject(objs.name, objs, obj)
+    const point = this.getStartEndPoint(0)
 
     startBt.setPosition(
       point.x,
@@ -403,9 +439,7 @@ export class gamePlayScene extends Phaser.Scene {
 
   loadEndFlag () {
     const endBt = this.add.image(0, 0, 'end_sign_pic')
-    const objs = this.map.getObjectLayer('start_end')
-    const obj = objs.objects[1]
-    const point = this.getSnappedWorldPositionFromMapObject(objs.name, objs, obj)
+    const point = this.getStartEndPoint(1)
 
     endBt.setPosition(
       point.x,
@@ -479,6 +513,8 @@ export class gamePlayScene extends Phaser.Scene {
 
   loadRoadPointArray () {
     this.roadPointArray = []
+    this.roadPointMarkerNodes.forEach((node) => node.destroy())
+    this.roadPointMarkerNodes = []
     const roadGroup = this.map.getObjectLayer('road')
     for (const road of roadGroup.objects) {
       const point = this.getSnappedWorldPositionFromMapObject(roadGroup.name, roadGroup, road)
@@ -493,6 +529,7 @@ export class gamePlayScene extends Phaser.Scene {
         const marker = this.add.circle(point.x, point.y, 6, 0x2ecc71, 0.95)
         marker.setDepth(120)
         marker.setStrokeStyle(2, 0x145a32, 1)
+        this.roadPointMarkerNodes.push(marker)
       }
     }
   }
@@ -505,11 +542,15 @@ export class gamePlayScene extends Phaser.Scene {
   }
 
   loadSmallObstacle () {
+    this.obstacleNodes.small.forEach((node) => node.destroy())
+    this.obstacleNodes.small = []
     const group = this.map.getObjectLayer('small')
     for (const obj of group.objects) {
       const { x, y } = this.getAlignedWorldPositionFromMapObject(group.name, group, obj)
       const sprite = this.add.sprite(x, y, obj.name)
       sprite.setDepth(this.ZOrderEnum.OBSTACLE)
+      sprite.setData('mapObject', obj)
+      this.obstacleNodes.small.push(sprite)
 
       const info = this.getGridInfoFromMapObject(group.name, obj)
       if (info.isInMap) {
@@ -519,11 +560,15 @@ export class gamePlayScene extends Phaser.Scene {
   }
 
   loadLittleObstacle () {
+    this.obstacleNodes.little.forEach((node) => node.destroy())
+    this.obstacleNodes.little = []
     const group = this.map.getObjectLayer('little')
     for (const obj of group.objects) {
       const { x, y } = this.getAlignedWorldPositionFromMapObject(group.name, group, obj)
       const sprite = this.add.sprite(x, y, obj.name)
       sprite.setDepth(this.ZOrderEnum.OBSTACLE)
+      sprite.setData('mapObject', obj)
+      this.obstacleNodes.little.push(sprite)
 
       const info = this.getGridInfoFromMapObject(group.name, obj)
       if (info.isInMap) {
@@ -536,11 +581,15 @@ export class gamePlayScene extends Phaser.Scene {
   }
 
   loadBigObstacle () {
+    this.obstacleNodes.big.forEach((node) => node.destroy())
+    this.obstacleNodes.big = []
     const group = this.map.getObjectLayer('big')
     for (const obj of group.objects) {
       const { x, y } = this.getAlignedWorldPositionFromMapObject(group.name, group, obj)
       const sprite = this.add.sprite(x, y, obj.name)
       sprite.setDepth(this.ZOrderEnum.OBSTACLE)
+      sprite.setData('mapObject', obj)
+      this.obstacleNodes.big.push(sprite)
 
       const info = this.getGridInfoFromMapObject(group.name, obj)
       if (info.isInMap) {
@@ -631,6 +680,162 @@ export class gamePlayScene extends Phaser.Scene {
         box.setDepth(119)
       }
     }
+  }
+
+  getStartEndPoint (index) {
+    const group = this.map.getObjectLayer('start_end')
+    const obj = group.objects[index]
+    return this.getSnappedWorldPositionFromMapObject(group.name, group, obj)
+  }
+
+  refreshAlignmentPreview () {
+    if (!this.debugAlignmentMode) {
+      return
+    }
+
+    this.loadRoadPointArray()
+
+    const startPoint = this.getStartEndPoint(0)
+    if (this.startButton) {
+      this.startButton.setPosition(startPoint.x, startPoint.y + 20)
+    }
+
+    const endPoint = this.getStartEndPoint(1)
+    if (this.carrot) {
+      this.carrot.setPosition(endPoint.x, endPoint.y + 20)
+    }
+    if (this.carrotHpBg && this.carrot) {
+      this.carrotHpBg.setPosition(this.carrot.x + 75, this.carrot.y - 50)
+    }
+    if (this.healthText && this.carrotHpBg) {
+      this.healthText.setPosition(this.carrotHpBg.x - 15, this.carrotHpBg.y - 3)
+    }
+
+    const obstacleGroups = ['small', 'little', 'big']
+    for (const groupName of obstacleGroups) {
+      const group = this.map.getObjectLayer(groupName)
+      for (const sprite of this.obstacleNodes[groupName]) {
+        const obj = sprite.getData('mapObject')
+        const point = this.getAlignedWorldPositionFromMapObject(groupName, group, obj)
+        sprite.setPosition(point.x, point.y)
+      }
+    }
+  }
+
+  registerAlignmentDebugKeys () {
+    if (!this.debugAlignmentMode || !this.input.keyboard) {
+      return
+    }
+
+    this.input.keyboard.on('keydown-ONE', () => this.setAlignmentDebugTarget('road'))
+    this.input.keyboard.on('keydown-TWO', () => this.setAlignmentDebugTarget('start_end'))
+    this.input.keyboard.on('keydown-THREE', () => this.setAlignmentDebugTarget('small'))
+    this.input.keyboard.on('keydown-FOUR', () => this.setAlignmentDebugTarget('little'))
+    this.input.keyboard.on('keydown-FIVE', () => this.setAlignmentDebugTarget('big'))
+
+    this.input.keyboard.on('keydown-LEFT', () => this.adjustAlignmentDebugOffset(-1, 0))
+    this.input.keyboard.on('keydown-RIGHT', () => this.adjustAlignmentDebugOffset(1, 0))
+    this.input.keyboard.on('keydown-UP', () => this.adjustAlignmentDebugOffset(0, -1))
+    this.input.keyboard.on('keydown-DOWN', () => this.adjustAlignmentDebugOffset(0, 1))
+    this.input.keyboard.on('keydown-R', () => this.resetAlignmentDebugOffset())
+    this.input.keyboard.on('keydown-OPEN_BRACKET', () => this.setAlignmentDebugStep(-1))
+    this.input.keyboard.on('keydown-CLOSED_BRACKET', () => this.setAlignmentDebugStep(1))
+    this.input.keyboard.on('keydown-P', () => this.printAlignmentConfigSnippet())
+
+    this.printAlignmentDebugState()
+  }
+
+  setAlignmentDebugTarget (target) {
+    this.debugAlignmentTarget = target
+    this.printAlignmentDebugState()
+  }
+
+  adjustAlignmentDebugOffset (deltaX, deltaY) {
+    const target = this.debugAlignmentTarget
+    const current = this.runtimeAlignmentOffsets[target] ?? { x: 0, y: 0 }
+    this.runtimeAlignmentOffsets[target] = {
+      x: current.x + (deltaX * this.debugAlignmentStep),
+      y: current.y + (deltaY * this.debugAlignmentStep)
+    }
+    this.refreshAlignmentPreview()
+    this.printAlignmentDebugState()
+  }
+
+  resetAlignmentDebugOffset () {
+    this.runtimeAlignmentOffsets[this.debugAlignmentTarget] = { x: 0, y: 0 }
+    this.refreshAlignmentPreview()
+    this.printAlignmentDebugState()
+  }
+
+  setAlignmentDebugStep (delta) {
+    this.debugAlignmentStep = Phaser.Math.Clamp(this.debugAlignmentStep + delta, 1, 10)
+    this.printAlignmentDebugState()
+  }
+
+  printAlignmentDebugState () {
+    const target = this.debugAlignmentTarget
+    const offset = this.getAlignmentOffset(target)
+    this.refreshAlignmentDebugText()
+    console.log(
+      `[debugAlign] level=${this.levelIndex + 1} target=${target} offset={ x: ${offset.x}, y: ${offset.y} } step=${this.debugAlignmentStep}`
+    )
+  }
+
+  getAlignmentConfigSnippet () {
+    const targets = ['road', 'startEnd', 'small', 'little', 'big']
+    const snippet = {}
+
+    for (const target of targets) {
+      const key = target === 'startEnd' ? 'start_end' : target
+      const offset = this.getAlignmentOffset(key)
+      if (offset.x !== 0 || offset.y !== 0) {
+        snippet[target] = { x: offset.x, y: offset.y }
+      }
+    }
+
+    return snippet
+  }
+
+  printAlignmentConfigSnippet () {
+    const snippet = this.getAlignmentConfigSnippet()
+    console.log(`[debugAlign] level=${this.levelIndex + 1} alignment=${JSON.stringify(snippet, null, 2)}`)
+  }
+
+  loadAlignmentDebugText () {
+    if (!this.debugAlignmentMode) {
+      return
+    }
+
+    this.alignmentDebugText = this.add.text(18, 106, '', {
+      fontFamily: 'Menlo, Monaco, monospace',
+      fontSize: 18,
+      color: '#fff7cc',
+      stroke: '#2f2012',
+      strokeThickness: 4,
+      lineSpacing: 6
+    })
+    this.alignmentDebugText.setOrigin(0, 0)
+    this.alignmentDebugText.setDepth(160)
+    this.refreshAlignmentDebugText()
+  }
+
+  refreshAlignmentDebugText () {
+    if (!this.alignmentDebugText) {
+      return
+    }
+
+    const target = this.debugAlignmentTarget
+    const offset = this.getAlignmentOffset(target)
+    this.alignmentDebugText.setText([
+      `Align Debug  L${this.levelIndex + 1}`,
+      `Target: ${target}`,
+      `Offset: x=${offset.x}, y=${offset.y}`,
+      `Step: ${this.debugAlignmentStep}`,
+      '1 road  2 start_end  3 small',
+      '4 little  5 big',
+      'Arrows adjust  R reset target',
+      '[ ] step  P print snippet'
+    ].join('\n'))
   }
 
   loadTopBar () {
